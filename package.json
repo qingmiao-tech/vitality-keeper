@@ -1,0 +1,36 @@
+{
+  "name": "vitality-keeper",
+  "version": "0.1.6",
+  "description": "A lightweight Tauri break reminder with local video guidance and multi-display support.",
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/qingmiao-tech/vitality-keeper.git"
+  },
+  "homepage": "https://github.com/qingmiao-tech/vitality-keeper#readme",
+  "bugs": {
+    "url": "https://github.com/qingmiao-tech/vitality-keeper/issues"
+  },
+  "keywords": [
+    "tauri",
+    "rust",
+    "break-reminder",
+    "wellness",
+    "video",
+    "productivity"
+  ],
+  "scripts": {
+    "tauri": "tauri",
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "start": "npm run dev"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.10.1",
+    "@tauri-apps/plugin-dialog": "^2.6.0"
+  }
+}

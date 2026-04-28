@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dao">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>元气守恒·筑基令 (Vitality Keeper)</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Load Lucide Icons for modern, clean scalable SVGs -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="sortable.min.js"></script>
+    <script src="i18n.js"></script>
+    <script src="app-config.js"></script>
+</head>
+
+<body>
+    <!-- Frameless Window Titlebar -->
+    <header class="titlebar">
+        <div class="titlebar-drag" data-tauri-drag-region>
+            <div class="brand">
+                <div class="gold-dot"></div>
+                <span data-i18n="app.name">元气守恒·筑基令</span>
+            </div>
+        </div>
+    </header>
+    <div class="window-controls floating-window-controls">
+        <button type="button" class="traffic-light maximize" id="btn-wc-maximize" data-i18n-title="window.enterFullscreen"
+            data-i18n-aria-label="window.enterFullscreen" title="全屏"></button>
+        <button type="button" class="traffic-light minimize" id="btn-wc-minimize" data-i18n-title="window.minimize"
+            data-i18n-aria-label="window.minimize" title="最小化"></button>
+        <button type="button" class="traffic-light close" id="btn-wc-close" data-i18n-title="window.hide"
+            data-i18n-aria-label="window.hide" title="隐藏"></button>
+    </div>
+
+    <!-- Main App Canvas -->
+    <div class="app-layout">
+
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar">
+            <a class="nav-item active" data-target="tab-home">
+                <i data-lucide="layout-dashboard"></i>
+                <span data-i18n="nav.home">总览</span>
+            </a>
+            <a class="nav-item" data-target="tab-schedule">
+                <i data-lucide="clock"></i>
+                <span data-i18n="nav.schedule">节律</span>
+            </a>
+            <a class="nav-item" data-target="tab-media">
+                <i data-lucide="film"></i>
+                <span data-i18n="nav.media">视频</span>
+            </a>
+            <a class="nav-item" data-target="tab-theme">
+                <i data-lucide="palette"></i>
+                <span data-i18n="nav.theme">外观</span>
+            </a>
+            <a class="nav-item" data-target="tab-system">
+                <i data-lucide="settings"></i>
+                <span data-i18n="nav.system">系统</span>
+            </a>
+
+            <!-- Cat Easter Egg -->
+            <div class="cat-status">
+                <i data-lucide="cat"></i>
+                <p data-i18n="cat.sleeping">守护中，节律稳定</p>
+            </div>
+        </nav>
+
+        <!-- Content Area -->
+        <main class="content-area">
+
+            <!-- Tab: Home -->
+            <div id="tab-home" class="tab-content active" style="display: flex; flex-direction: column; gap: 24px;">
+                <!-- Hero Greeting Card -->
+                <div class="glass-card hero-card">
+                    <div class="hero-text">
+                        <h1 data-i18n="home.heroTitle">开始今天的专注节律。</h1>
+                        <p data-i18n="home.heroSubtitle">用一次完整的筑基休息，把久坐和疲惫挡在节律之外。</p>
+                    </div>
+                    <div class="hero-logo-shell" aria-hidden="true">
+                        <div class="hero-logo-aura"></div>
+                        <img class="hero-logo-image" src="brand-logo.png" alt="">
+                    </div>
+                </div>
+
+                <!-- Quick Stats -->
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-label" data-i18n="home.nextBreak">距下次筑基休息</div>
+                        <div class="stat-value" id="timer-display">45:00</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label" data-i18n="home.currentMode">当前模式</div>
+                        <div class="stat-value" style="color: var(--text-primary)" data-i18n="home.focusMode">专注守恒</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label" data-i18n="home.videoCount">已加载视频</div>
+                        <div class="stat-value" id="video-count-display" style="color: var(--accent-gold)">...</div>
+                    </div>
+                </div>
+
+                <!-- Settings Block Mockup -->
+                <div class="glass-card">
+                    <h2><i data-lucide="shield"></i> <span data-i18n="home.guardTitle">休息守护</span></h2>
+                    <p style="margin-bottom: 24px;" data-i18n="home.guardDesc">设置筑基令触发时的介入强度。</p>
+
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <h3 data-i18n="home.strictTitle">严格模式 (不可跳过)</h3>
+                            <p data-i18n="home.strictDesc">筑基休息开始后隐藏跳过入口，帮助自己认真完成本轮恢复。</p>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="setting-strict-mode">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <h3 data-i18n="home.fullscreenTitle">休息时默认全屏</h3>
+                            <p data-i18n="home.fullscreenDesc">触发筑基令时自动全屏播放，让视频引导更沉浸。</p>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="setting-fullscreen">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <h3 data-i18n="home.dndTitle">沉浸免打扰探测</h3>
+                            <p data-i18n="home.dndDesc">当系统正在全屏游戏或播放视频时，暂缓触发休息。</p>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="setting-dnd-enabled">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <h3 data-i18n="home.naturalTitle">自然归元 (空闲重置)</h3>
+                            <p data-i18n="home.naturalDesc">检测到离开电脑或锁屏超过 10 分钟，自动重置当前周期。</p>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="setting-natural-breaks-enabled">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-schedule" class="tab-content" style="display: none; flex-direction: column; gap: 24px;">
+                <div class="glass-card">
+                    <h2><i data-lucide="clock"></i> <span data-i18n="schedule.title">休息节律</span></h2>
+                    <p data-i18n="schedule.description">管理专注间隔与单次筑基休息时长。</p>
+                    <div class="setting-row" style="margin-top: 16px;">
+                        <div class="setting-info">
+                            <h3 data-i18n="schedule.workTitle">专注间隔</h3>
+                            <p data-i18n="schedule.workDesc">两次筑基休息之间的工作时间 (分钟)</p>
+                        </div>
+                        <div style="font-size: 20px; color: var(--accent-gold); display:flex; align-items:center;">
+                            <input type="number" id="setting-work-duration" min="5" max="180"
+                                style="background:transparent; border:1px solid var(--border-light); color:var(--accent-gold); border-radius:8px; padding:4px 8px; font-size:20px; width:70px; text-align:right; font-family:inherit;">
+                            <span style="margin-left:4px; font-size:14px; color:var(--text-secondary);" data-i18n="common.minuteShort">分</span>
+                        </div>
+                    </div>
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <h3 data-i18n="schedule.breakTitle">单次休息时长</h3>
+                            <p data-i18n="schedule.breakDesc">固定时长模式下的休息持续时间</p>
+                        </div>
+                        <div style="font-size: 20px; color: var(--accent-green); display:flex; align-items:center;">
+                            <input type="number" id="setting-break-duration" min="1" max="60"
+                                style="background:transparent; border:1px solid var(--border-light); color:var(--accent-green); border-radius:8px; padding:4px 8px; font-size:20px; width:70px; text-align:right; font-family:inherit;">
+                            <span style="margin-left:4px; font-size:14px; color:var(--text-secondary);" data-i18n="common.minuteShort">分</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Media -->
+            <div id="tab-media" class="tab-content" style="display: none; flex-direction: column; gap: 24px;">
+                <div class="glass-card">
+                    <h2><i data-lucide="film"></i> <span data-i18n="media.title">本地视频引导</span></h2>
+                    <p data-i18n="media.description">选择休息时播放的本地拉伸、健身或养生视频。</p>
+                    <div class="setting-row" style="margin-top: 16px;">
+                        <div class="setting-info">
+                            <h3 data-i18n="media.sourceTitle">视频来源</h3>
+                            <p id="video-source-path-display" data-i18n="media.noSource">尚未选择视频源</p>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button id="btn-select-file"
+                                style="padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border-light); background: transparent; color: var(--text-primary); cursor: pointer;"
+                                data-i18n="media.selectFile">选择文件</button>
+                            <button id="btn-select-dir"
+                                style="padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border-light); background: transparent; color: var(--text-primary); cursor: pointer;"
+                                data-i18n="media.selectDirectory">选择文件夹</button>
+                        </div>
+                    </div>
+
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <h3 data-i18n="media.strategyTitle">休息结束策略</h3>
+                            <p data-i18n="media.strategyDesc">选择跟随视频自然结束，或循环播放直到固定休息时长结束。</p>
+                        </div>
+                        <div style="display: flex; gap: 16px; align-items:center;">
+                            <label style="cursor:pointer;"><input type="radio" name="setting-break-strategy"
+                                    value="video"> <span data-i18n="media.strategyVideo">视频播完结束</span></label>
+                            <label style="cursor:pointer;"><input type="radio" name="setting-break-strategy"
+                                    value="fixed"> <span data-i18n="media.strategyFixed">固定休息时长结束</span></label>
+                        </div>
+                    </div>
+
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <h3 data-i18n="media.fullscreenModeTitle">全屏呈现方式</h3>
+                            <p data-i18n="media.fullscreenModeDesc">选择铺满屏幕或完整显示视频内容。完整显示会保留黑边，更适合超宽屏与竖屏。</p>
+                        </div>
+                        <div style="display: flex; gap: 16px; align-items:center;">
+                            <label style="cursor:pointer;"><input type="radio" name="setting-fullscreen-fit-mode"
+                                    value="cover"> <span data-i18n="media.fullscreenModeCover">铺满屏幕（可能裁剪）</span></label>
+                            <label style="cursor:pointer;"><input type="radio" name="setting-fullscreen-fit-mode"
+                                    value="contain"> <span data-i18n="media.fullscreenModeContain">完整显示（保留黑边）</span></label>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 24px;">
+                        <h3 data-i18n="media.playlistTitle">视频列表与时长预览：</h3>
+                        <ul id="video-playlist"
+                            style="color:var(--text-secondary); max-height:200px; overflow-y:auto; border:1px solid var(--border-light); border-radius:8px; padding:16px; list-style:none; margin-top:8px;">
+                            <li data-i18n="media.loading">正在加载...</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Theme -->
+            <div id="tab-theme" class="tab-content" style="display: none; flex-direction: column; gap: 24px;">
+                <div class="glass-card">
+                    <h2><i data-lucide="palette"></i> <span data-i18n="theme.title">外观主题</span></h2>
+                    <p data-i18n="theme.description">切换控制中心的视觉风格。</p>
+                    <!-- Theme Selector Mockup -->
+                    <div style="display: flex; gap: 16px; margin-top: 24px;">
+                        <div class="theme-btn" data-theme-val="dao"
+                            style="padding: 16px; border: 2px solid var(--accent-gold); border-radius: 8px; cursor: pointer; text-align: center; background: #0f172a;">
+                            <div
+                                style="width: 24px; height: 24px; border-radius: 50%; background: #10b981; margin: 0 auto 8px;">
+                            </div>
+                            <span style="color: #f8fafc;" data-i18n="theme.dao">数字禅意</span>
+                        </div>
+                        <div class="theme-btn" data-theme-val="light"
+                            style="padding: 16px; border: 1px solid var(--border-light); border-radius: 8px; cursor: pointer; text-align: center; background: #f8fafc;">
+                            <div
+                                style="width: 24px; height: 24px; border-radius: 50%; background: #059669; margin: 0 auto 8px;">
+                            </div>
+                            <span style="color: #0f172a;" data-i18n="theme.light">白昼极简</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: System -->
+            <div id="tab-system" class="tab-content" style="display: none; flex-direction: column; gap: 24px;">
+                <div class="glass-card">
+                    <h2><i data-lucide="settings"></i> <span data-i18n="system.title">系统集成</span></h2>
+                    <p data-i18n="system.description">管理开机自启、快捷键与语言等系统能力。</p>
+                    <div class="setting-row" style="margin-top: 16px;">
+                        <div class="setting-info">
+                            <h3 data-i18n="system.languageTitle">界面语言</h3>
+                            <p data-i18n="system.languageDesc">切换控制台和休息页的显示语言，默认中文。</p>
+                        </div>
+                        <div class="language-picker" id="setting-language-picker">
+                            <button type="button" class="language-trigger" id="setting-language-trigger"
+                                aria-haspopup="listbox" aria-expanded="false">
+                                <span class="language-current" id="setting-language-current" data-i18n="system.languageZh">简体中文</span>
+                                <i data-lucide="chevron-down"></i>
+                            </button>
+                            <div class="language-menu" id="setting-language-menu" role="listbox"
+                                aria-labelledby="setting-language-trigger" hidden>
+                                <button type="button" class="language-option" data-language-option="zh-CN" role="option"
+                                    aria-selected="true">
+                                    <span data-i18n="system.languageZh">简体中文</span>
+                                </button>
+                                <button type="button" class="language-option" data-language-option="en-US" role="option"
+                                    aria-selected="false">
+                                    <span data-i18n="system.languageEn">English</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="setting-row" style="margin-top: 16px;">
+                        <div class="setting-info">
+                            <h3 data-i18n="system.autostartTitle">开机自启</h3>
+                            <p data-i18n="system.autostartDesc">系统启动后自动在后台运行</p>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="setting-autostart-enabled">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <h3 data-i18n="system.shortcutTitle">全局热键</h3>
+                            <p data-i18n="system.shortcutDesc">按下 Ctrl + Alt + Q 快速重置休息周期</p>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        const { listen } = window.__TAURI__.event
+        const { invoke, convertFileSrc } = window.__TAURI__.core
+        const configApi = window.vitalityConfig
+        const i18nApi = window.vitalityI18n
+        const tauriWindowApi = window.__TAURI__.window
+
+        let currentConfig = configApi.getCachedConfig()
+        let playlistSortable = null
+
+        function t(key, params = {}) {
+            return i18nApi.t(key, currentConfig.language, params)
+        }
+
+        function formatClockDuration(totalSeconds) {
+            const seconds = Math.max(0, Math.floor(Number(totalSeconds) || 0))
+            const hours = Math.floor(seconds / 3600)
+            const mins = Math.floor((seconds % 3600) / 60)
+            const secs = seconds % 60
+
+            if (hours > 0) {
+                return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+            }
+
+            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+        }
+
+        function applyLanguage(language) {
+            const normalizedLanguage = i18nApi.applyI18n(language)
+            document.title = i18nApi.t('dashboard.documentTitle', normalizedLanguage)
+            currentConfig = {
+                ...currentConfig,
+                language: normalizedLanguage
+            }
+            syncLanguagePicker()
+
+            return normalizedLanguage
+        }
+
+        function getLanguageLabel(language) {
+            return language === 'en-US'
+                ? t('system.languageEn')
+                : t('system.languageZh')
+        }
+
+        function setLanguageMenuOpen(isOpen) {
+            const picker = document.getElementById('setting-language-picker')
+            const trigger = document.getElementById('setting-language-trigger')
+            const menu = document.getElementById('setting-language-menu')
+
+            if (!picker || !trigger || !menu) {
+                return
+            }
+
+            picker.classList.toggle('open', isOpen)
+            trigger.setAttribute('aria-expanded', String(isOpen))
+            menu.hidden = !isOpen
+        }
+
+        function syncLanguagePicker() {
+            const currentLabel = document.getElementById('setting-language-current')
+            if (currentLabel) {
+                currentLabel.textContent = getLanguageLabel(currentConfig.language)
+            }
+
+            document.querySelectorAll('[data-language-option]').forEach((option) => {
+                const isSelected = option.getAttribute('data-language-option') === currentConfig.language
+                option.classList.toggle('is-selected', isSelected)
+                option.setAttribute('aria-selected', String(isSelected))
+            })
+        }
+
+        function setVideoCountDisplay(count) {
+            document.getElementById('video-count-display').textContent = t('media.count', { count })
+        }
+
+        function renderPlaylistMessage(playlist, key) {
+            playlist.innerHTML = ''
+            const item = document.createElement('li')
+            item.textContent = t(key)
+            playlist.appendChild(item)
+        }
+
+        function renderIcons() {
+            if (window.lucide && typeof window.lucide.createIcons === 'function') {
+                window.lucide.createIcons()
+            }
+        }
+
+        function getCurrentWindowLabel() {
+            const currentWindow = tauriWindowApi && typeof tauriWindowApi.getCurrentWindow === 'function'
+                ? tauriWindowApi.getCurrentWindow()
+                : null
+
+            if (currentWindow && typeof currentWindow.label === 'string' && currentWindow.label.length > 0) {
+                return currentWindow.label
+            }
+
+            const internalLabel = window.__TAURI_INTERNALS__
+                && window.__TAURI_INTERNALS__.metadata
+                && window.__TAURI_INTERNALS__.metadata.currentWindow
+                && typeof window.__TAURI_INTERNALS__.metadata.currentWindow.label === 'string'
+                ? window.__TAURI_INTERNALS__.metadata.currentWindow.label
+                : ''
+
+            return internalLabel || 'main'
+        }
+
+        function updateTimerDisplay(totalSeconds) {
+            const mins = Math.floor(totalSeconds / 60).toString().padStart(2, '0')
+            const secs = (totalSeconds % 60).toString().padStart(2, '0')
+            document.getElementById('timer-display').textContent = `${mins}:${secs}`
+        }
+
+        async function persistConfig(patch) {
+            currentConfig = await configApi.saveConfig(patch)
+            return currentConfig
+        }
+
+        function applyTheme(themeName) {
+            document.documentElement.setAttribute('data-theme', themeName)
+            document.querySelectorAll('.theme-btn').forEach((btn) => {
+                btn.style.border = btn.getAttribute('data-theme-val') === themeName
+                    ? '2px solid var(--accent-gold)'
+                    : '1px solid var(--border-light)'
+            })
+        }
+
+        function bindWindowControls() {
+            async function runWindowAction(actionName) {
+                const currentWindow = tauriWindowApi && typeof tauriWindowApi.getCurrentWindow === 'function'
+                    ? tauriWindowApi.getCurrentWindow()
+                    : null
+                const currentWindowLabel = getCurrentWindowLabel()
+
+                if (actionName === 'hide') {
+                    if (currentWindow && typeof currentWindow.hide === 'function') {
+                        try {
+                            await currentWindow.hide()
+                            return
+                        } catch (error) {
+                            console.warn('当前窗口 API hide 调用失败，回退到 Rust 命令。', error)
+                        }
+                    }
+                    await invoke('control_window', {
+                        action: 'hide',
+                        label: currentWindowLabel
+                    })
+                    return
+                }
+
+                if (actionName === 'minimize') {
+                    if (currentWindow && typeof currentWindow.minimize === 'function') {
+                        try {
+                            await currentWindow.minimize()
+                            return
+                        } catch (error) {
+                            console.warn('当前窗口 API minimize 调用失败，回退到 Rust 命令。', error)
+                        }
+                    }
+                    await invoke('control_window', {
+                        action: 'minimize',
+                        label: currentWindowLabel
+                    })
+                    return
+                }
+
+                if (
+                    currentWindow &&
+                    typeof currentWindow.isFullscreen === 'function' &&
+                    typeof currentWindow.setFullscreen === 'function'
+                ) {
+                    try {
+                        const nextFullscreen = !(await currentWindow.isFullscreen())
+                        await currentWindow.setFullscreen(nextFullscreen)
+                        return
+                    } catch (error) {
+                        console.warn('当前窗口 API fullscreen 调用失败，回退到 Rust 命令。', error)
+                    }
+                }
+
+                await invoke('control_window', {
+                    action: 'toggle-fullscreen',
+                    label: currentWindowLabel
+                })
+            }
+
+            const bindings = [
+                ['btn-wc-close', 'hide'],
+                ['btn-wc-minimize', 'minimize'],
+                ['btn-wc-maximize', 'toggle-fullscreen']
+            ]
+
+            bindings.forEach(([id, actionName]) => {
+                const element = document.getElementById(id)
+                if (!element) return
+                let lastTriggeredAt = 0
+
+                const runAction = async (event) => {
+                    event.preventDefault()
+                    event.stopPropagation()
+
+                    const now = Date.now()
+                    if (now - lastTriggeredAt < 180) {
+                        return
+                    }
+                    lastTriggeredAt = now
+
+                    try {
+                        await runWindowAction(actionName)
+                    } catch (error) {
+                        console.error(`窗口操作失败: ${id}`, error)
+                    }
+                }
+
+                element.addEventListener('pointerdown', (event) => {
+                    event.stopPropagation()
+                })
+                element.addEventListener('pointerup', runAction)
+                element.addEventListener('mouseup', runAction)
+                element.addEventListener('click', runAction)
+                element.addEventListener('keydown', (event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                        runAction(event)
+                    }
+                })
+            })
+        }
+
+        function bindNavigation() {
+            const navItems = document.querySelectorAll('.nav-item')
+            const tabContents = document.querySelectorAll('.tab-content')
+
+            navItems.forEach((item) => {
+                item.addEventListener('click', () => {
+                    navItems.forEach((nav) => nav.classList.remove('active'))
+                    tabContents.forEach((tab) => { tab.style.display = 'none' })
+
+                    item.classList.add('active')
+
+                    const targetId = item.getAttribute('data-target')
+                    if (!targetId) return
+
+                    const targetEl = document.getElementById(targetId)
+                    if (targetEl) {
+                        targetEl.style.display = 'flex'
+                        renderIcons()
+                    }
+                })
+            })
+        }
+
+        function bindThemeSelector() {
+            document.querySelectorAll('.theme-btn').forEach((btn) => {
+                btn.addEventListener('click', async () => {
+                    const themeName = btn.getAttribute('data-theme-val') || 'dao'
+                    applyTheme(themeName)
+                    await persistConfig({ theme: themeName })
+                })
+            })
+        }
+
+        function bindSettings() {
+            const workInput = document.getElementById('setting-work-duration')
+            const breakInput = document.getElementById('setting-break-duration')
+            const strictToggle = document.getElementById('setting-strict-mode')
+            const fullscreenToggle = document.getElementById('setting-fullscreen')
+            const autostartToggle = document.getElementById('setting-autostart-enabled')
+            const dndToggle = document.getElementById('setting-dnd-enabled')
+            const naturalBreaksToggle = document.getElementById('setting-natural-breaks-enabled')
+            const languagePicker = document.getElementById('setting-language-picker')
+            const languageTrigger = document.getElementById('setting-language-trigger')
+            const languageMenu = document.getElementById('setting-language-menu')
+
+            workInput.value = currentConfig.workMinutes
+            breakInput.value = currentConfig.breakMinutes
+            strictToggle.checked = currentConfig.strictMode
+            fullscreenToggle.checked = currentConfig.fullscreen
+            autostartToggle.checked = currentConfig.autostartEnabled
+            dndToggle.checked = currentConfig.dndEnabled
+            naturalBreaksToggle.checked = currentConfig.naturalBreaksEnabled
+            syncLanguagePicker()
+
+            invoke('get_autostart_enabled')
+                .then((enabled) => {
+                    autostartToggle.checked = enabled
+                    currentConfig.autostartEnabled = enabled
+                })
+                .catch((error) => {
+                    console.warn('读取系统开机自启状态失败，使用配置状态。', error)
+                })
+
+            workInput.addEventListener('change', async (event) => {
+                await persistConfig({ workMinutes: Number(event.target.value) })
+            })
+
+            breakInput.addEventListener('change', async (event) => {
+                await persistConfig({ breakMinutes: Number(event.target.value) })
+            })
+
+            strictToggle.addEventListener('change', async (event) => {
+                await persistConfig({ strictMode: event.target.checked })
+            })
+
+            fullscreenToggle.addEventListener('change', async (event) => {
+                await persistConfig({ fullscreen: event.target.checked })
+            })
+
+            autostartToggle.addEventListener('change', async (event) => {
+                const requested = event.target.checked
+                try {
+                    await persistConfig({ autostartEnabled: requested })
+                    const enabled = await invoke('get_autostart_enabled')
+                    autostartToggle.checked = enabled
+                    currentConfig.autostartEnabled = enabled
+                } catch (error) {
+                    console.error('更新系统开机自启失败。', error)
+                    autostartToggle.checked = !requested
+                    currentConfig.autostartEnabled = !requested
+                }
+            })
+
+            dndToggle.addEventListener('change', async (event) => {
+                await persistConfig({ dndEnabled: event.target.checked })
+            })
+
+            naturalBreaksToggle.addEventListener('change', async (event) => {
+                await persistConfig({ naturalBreaksEnabled: event.target.checked })
+            })
+
+            languageTrigger.addEventListener('click', (event) => {
+                event.preventDefault()
+                event.stopPropagation()
+                const isOpen = languagePicker.classList.contains('open')
+                setLanguageMenuOpen(!isOpen)
+            })
+
+            languageMenu.querySelectorAll('[data-language-option]').forEach((option) => {
+                option.addEventListener('click', async (event) => {
+                    event.preventDefault()
+                    const language = option.getAttribute('data-language-option')
+                    if (!language) {
+                        return
+                    }
+
+                    setLanguageMenuOpen(false)
+                    await persistConfig({ language })
+                    applyLanguage(currentConfig.language)
+                    await refreshVideoList()
+                })
+            })
+
+            document.addEventListener('click', (event) => {
+                if (!languagePicker.contains(event.target)) {
+                    setLanguageMenuOpen(false)
+                }
+            })
+
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape') {
+                    setLanguageMenuOpen(false)
+                }
+            })
+
+            document.querySelectorAll('input[name="setting-break-strategy"]').forEach((radio) => {
+                radio.checked = radio.value === currentConfig.breakStrategy
+                radio.addEventListener('change', async (event) => {
+                    if (event.target.checked) {
+                        await persistConfig({ breakStrategy: event.target.value })
+                    }
+                })
+            })
+
+            document.querySelectorAll('input[name="setting-fullscreen-fit-mode"]').forEach((radio) => {
+                radio.checked = radio.value === currentConfig.fullscreenFitMode
+                radio.addEventListener('change', async (event) => {
+                    if (event.target.checked) {
+                        await persistConfig({ fullscreenFitMode: event.target.value })
+                    }
+                })
+            })
+        }
+
+        async function refreshVideoList() {
+            const path = currentConfig.videoSource
+            const videoSourceDisplay = document.getElementById('video-source-path-display')
+            const playlist = document.getElementById('video-playlist')
+            const countDisplay = document.getElementById('video-count-display')
+
+            videoSourceDisplay.textContent = path || t('media.noSource')
+            renderPlaylistMessage(playlist, 'media.loadingMetadata')
+
+            if (playlistSortable) {
+                playlistSortable.destroy()
+                playlistSortable = null
+            }
+
+            if (!path) {
+                countDisplay.textContent = t('media.count', { count: 0 })
+                renderPlaylistMessage(playlist, 'media.noSourcePlaylist')
+                return
+            }
+
+            try {
+                const list = await invoke('get_video_list', { sourcePath: path })
+                countDisplay.textContent = t('media.count', { count: list.length })
+                playlist.innerHTML = ''
+
+                if (list.length === 0) {
+                    renderPlaylistMessage(playlist, 'media.noneMatched')
+                    return
+                }
+
+                const order = Array.isArray(currentConfig.customVideoOrder) ? [...currentConfig.customVideoOrder] : []
+                const disabledVideos = new Set(currentConfig.disabledVideos || [])
+
+                list.sort((left, right) => {
+                    let leftIndex = order.indexOf(left)
+                    let rightIndex = order.indexOf(right)
+
+                    if (leftIndex === -1) leftIndex = Number.MAX_SAFE_INTEGER
+                    if (rightIndex === -1) rightIndex = Number.MAX_SAFE_INTEGER
+
+                    return leftIndex - rightIndex
+                })
+
+                for (const videoPath of list) {
+                    const listItem = document.createElement('li')
+                    listItem.dataset.path = videoPath
+                    listItem.style.display = 'flex'
+                    listItem.style.alignItems = 'center'
+                    listItem.style.gap = '10px'
+                    listItem.style.marginBottom = '10px'
+                    listItem.style.wordBreak = 'break-all'
+                    listItem.style.lineHeight = '1.4'
+                    listItem.style.padding = '6px 8px'
+                    listItem.style.borderRadius = '6px'
+                    listItem.style.transition = 'background 0.15s'
+
+                    const handle = document.createElement('span')
+                    handle.className = 'drag-handle'
+                    handle.textContent = '⠿'
+
+                    const checkbox = document.createElement('input')
+                    checkbox.type = 'checkbox'
+                    checkbox.checked = !disabledVideos.has(videoPath)
+                    checkbox.style.flexShrink = '0'
+                    checkbox.style.cursor = 'pointer'
+                    checkbox.addEventListener('change', async (event) => {
+                        if (event.target.checked) {
+                            disabledVideos.delete(videoPath)
+                        } else {
+                            disabledVideos.add(videoPath)
+                        }
+
+                        currentConfig = await persistConfig({
+                            disabledVideos: Array.from(disabledVideos)
+                        })
+                    })
+
+                    const textSpan = document.createElement('span')
+                    const filename = videoPath.split('\\').pop().split('/').pop()
+                    textSpan.textContent = `${filename} (${t('media.loading')})`
+                    textSpan.style.flex = '1'
+
+                    listItem.appendChild(handle)
+                    listItem.appendChild(checkbox)
+                    listItem.appendChild(textSpan)
+                    playlist.appendChild(listItem)
+
+                    const assetUrl = convertFileSrc(videoPath)
+                    const tempVideo = document.createElement('video')
+                    tempVideo.src = assetUrl
+                    tempVideo.preload = 'metadata'
+                    tempVideo.onloadedmetadata = () => {
+                        textSpan.textContent = t('media.videoDuration', {
+                            filename,
+                            duration: formatClockDuration(tempVideo.duration)
+                        })
+                        tempVideo.remove()
+                    }
+                    tempVideo.onerror = () => {
+                        textSpan.textContent = t('media.videoDurationReadError', { filename })
+                        tempVideo.remove()
+                    }
+                }
+
+                if (typeof Sortable !== 'undefined') {
+                    playlistSortable = Sortable.create(playlist, {
+                        handle: '.drag-handle',
+                        animation: 150,
+                        forceFallback: true,
+                        fallbackTolerance: 3,
+                        ghostClass: 'sortable-ghost',
+                        chosenClass: 'sortable-chosen',
+                        onEnd: async () => {
+                            const newOrder = Array.from(playlist.querySelectorAll('li')).map((item) => item.dataset.path)
+                            currentConfig = await persistConfig({ customVideoOrder: newOrder })
+                        }
+                    })
+                }
+            } catch (error) {
+                console.error('视频列表加载失败', error)
+                renderPlaylistMessage(playlist, 'media.readError')
+            }
+        }
+
+        async function bindVideoSourceActions() {
+            document.getElementById('btn-select-dir').addEventListener('click', async () => {
+                try {
+                    const selected = await invoke('plugin:dialog|open', { options: { directory: true } })
+                    if (typeof selected === 'string' && selected.length > 0) {
+                        await persistConfig({ videoSource: selected })
+                        await refreshVideoList()
+                    }
+                } catch (error) {
+                    console.error('目录选择失败', error)
+                    alert(t('media.selectDirectoryFailed'))
+                }
+            })
+
+            document.getElementById('btn-select-file').addEventListener('click', async () => {
+                try {
+                    const selected = await invoke('plugin:dialog|open', {
+                        options: {
+                            directory: false,
+                            filters: [{ name: 'Video', extensions: ['mp4', 'webm'] }]
+                        }
+                    })
+
+                    if (typeof selected === 'string' && selected.length > 0) {
+                        await persistConfig({ videoSource: selected })
+                        await refreshVideoList()
+                    }
+                } catch (error) {
+                    console.error('文件选择失败', error)
+                    alert(t('media.selectFileFailed'))
+                }
+            })
+        }
+
+        listen('timer-tick', (event) => {
+            updateTimerDisplay(event.payload)
+        })
+
+        async function bootstrap() {
+            bindWindowControls()
+            currentConfig = await configApi.loadConfig()
+            applyLanguage(currentConfig.language)
+            renderIcons()
+            bindNavigation()
+            bindThemeSelector()
+            bindSettings()
+            bindVideoSourceActions()
+            applyTheme(currentConfig.theme)
+            updateTimerDisplay(await invoke('get_time_remaining'))
+            setVideoCountDisplay(0)
+            await refreshVideoList()
+        }
+
+        bootstrap().catch((error) => {
+            console.error('控制台初始化失败', error)
+        })
+    </script>
+</body>
+
+</html>

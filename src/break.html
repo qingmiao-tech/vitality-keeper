@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dao">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>筑基休息中 - 元气守恒</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="i18n.js"></script>
+    <script src="app-config.js"></script>
+    <style>
+        /* Specific overrides for Break Window */
+        html,
+        body {
+            position: fixed;
+            inset: 0;
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: transparent;
+        }
+
+        /* Fullscreen Ink / Energy Field Overlay */
+        .ritual-overlay {
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(circle at center, rgba(15, 23, 42, 0.8) 0%, rgba(2, 6, 23, 0.98) 100%);
+            backdrop-filter: blur(24px);
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 4vh;
+        }
+
+        .ritual-overlay.media-fullscreen {
+            padding: 0;
+        }
+
+        /* Floating Video Container */
+        .media-vessel {
+            width: 80vw;
+            max-width: 1200px;
+            aspect-ratio: 16/9;
+            background: #000;
+            border-radius: var(--radius-lg);
+            box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6), 0 0 0 1px var(--border-light);
+            overflow: hidden;
+            position: relative;
+            z-index: 2;
+            transition: all 0.4s ease-in-out;
+        }
+
+        .media-vessel.fullscreen {
+            position: fixed;
+            inset: 0;
+            width: auto;
+            max-width: none;
+            height: auto;
+            aspect-ratio: auto;
+            border-radius: 0;
+            box-shadow: none;
+        }
+
+        .media-vessel video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Daoist Typography Header */
+        .ritual-header {
+            position: absolute;
+            top: 6vh;
+            text-align: center;
+            z-index: 3;
+            text-shadow: 0 2px 12px rgba(0, 0, 0, 0.8);
+        }
+
+        .ritual-header h1 {
+            font-size: 32px;
+            font-weight: 300;
+            letter-spacing: 4px;
+            color: var(--accent-gold);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+        }
+
+        .ritual-header h1::before,
+        .ritual-header h1::after {
+            content: '';
+            display: block;
+            width: 40px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent-gold), transparent);
+        }
+
+        .ritual-header p {
+            color: var(--text-secondary);
+            font-size: 14px;
+            letter-spacing: 1px;
+        }
+
+        /* Bottom Status & Progress */
+        .ritual-footer {
+            position: absolute;
+            bottom: 6vh;
+            width: 80vw;
+            max-width: 1200px;
+            z-index: 3;
+            text-align: center;
+        }
+
+        .status-text {
+            color: var(--text-muted);
+            font-size: 13px;
+            letter-spacing: 2px;
+            margin-bottom: 16px;
+            text-transform: uppercase;
+        }
+
+        .countdown-display {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 14px;
+        }
+
+        .countdown-label {
+            color: var(--text-secondary);
+            font-size: 12px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .countdown-value {
+            color: var(--text-primary);
+            font-size: clamp(28px, 4vw, 42px);
+            font-weight: 300;
+            letter-spacing: 2px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Elegant Wave/Line Progress Bar */
+        .progress-track {
+            width: 100%;
+            height: 2px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 0;
+            background: linear-gradient(90deg, var(--accent-green), var(--accent-gold));
+            box-shadow: 0 0 10px var(--accent-green);
+            transition: width 0.2s linear;
+        }
+
+        /* The "Dynamic Island" Action Bar */
+        .dynamic-island {
+            position: absolute;
+            bottom: 12vh;
+            background: var(--bg-panel);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-light);
+            border-radius: 32px;
+            padding: 8px 16px;
+            display: flex;
+            gap: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            z-index: 10;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .island-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+        }
+
+        .island-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+        }
+
+        .island-btn.destructive:hover {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+        }
+
+        .island-btn svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* After Video Completion State (Mock) */
+        .completion-panel {
+            display: none;
+            /* hidden by default */
+            text-align: center;
+            z-index: 4;
+        }
+
+        .completion-panel.active {
+            display: block;
+        }
+
+        .rt-btn {
+            margin-top: 32px;
+            background: transparent;
+            border: 1px solid var(--accent-gold);
+            color: var(--accent-gold);
+            padding: 12px 32px;
+            border-radius: 24px;
+            font-size: 15px;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+            backdrop-filter: blur(4px);
+        }
+
+        .rt-btn:hover {
+            background: rgba(251, 191, 36, 0.1);
+            box-shadow: 0 0 16px rgba(251, 191, 36, 0.2);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="ritual-overlay">
+
+        <!-- Top Header -->
+        <header class="ritual-header">
+            <h1 data-i18n="break.headerTitle">筑基休息开始</h1>
+            <p data-i18n="break.headerDesc">现在进入恢复时间。请跟随视频放松身体，给注意力一次完整回充。</p>
+        </header>
+
+        <!-- Main Video Vessel -->
+        <main class="media-vessel">
+            <!-- We put a placeholder image simulating video for static preview -->
+            <div id="video-placeholder"
+                style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:#1e293b; color:#64748b;">
+                <i data-lucide="play-circle" style="width:64px; height:64px; opacity:0.5;"></i>
+            </div>
+            <!-- Audio Recovery Notification -->
+            <div id="audio-recover-overlay"
+                style="display:none; position:absolute; top:16px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.6); color:#facc15; padding:8px 24px; border-radius:32px; z-index:10; font-size:14px; letter-spacing:1px; cursor:pointer;">
+                <i data-lucide="volume-x"
+                    style="width:16px; height:16px; margin-right:8px; vertical-align:text-bottom;"></i>
+                <span data-i18n="break.recoverAudio">点击屏幕任意位置可恢复声音</span>
+            </div>
+            <video id="meditation-video" autoplay
+                style="width:100%; height:100%; object-fit:cover; display:none;"></video>
+        </main>
+
+        <!-- Floating Actions Island -->
+        <div class="dynamic-island">
+            <button class="island-btn" id="btn-toggle-mute" data-i18n-title="break.mute" data-i18n-aria-label="break.mute" title="静音">
+                <i data-lucide="volume-2"></i>
+            </button>
+            <button class="island-btn" id="btn-toggle-play" data-i18n-title="break.playPause" data-i18n-aria-label="break.playPause" title="暂停 / 播放">
+                <i data-lucide="pause"></i>
+            </button>
+            <button class="island-btn" id="btn-toggle-fullscreen" data-i18n-title="break.toggleFullscreen" data-i18n-aria-label="break.toggleFullscreen" title="切换全屏">
+                <i data-lucide="maximize"></i>
+            </button>
+            <button class="island-btn" id="btn-postpone" data-i18n-title="break.postpone" data-i18n-aria-label="break.postpone" title="推迟 5 分钟">
+                <i data-lucide="clock"></i>
+            </button>
+            <button class="island-btn destructive" id="skip-btn" data-i18n-title="break.skip" data-i18n-aria-label="break.skip" title="跳过本次">
+                <i data-lucide="skip-forward"></i>
+            </button>
+        </div>
+
+        <!-- Bottom Progress -->
+        <footer class="ritual-footer">
+            <div class="status-text" data-i18n="break.status">休息进行中，请专注当下</div>
+            <div class="countdown-display">
+                <span class="countdown-label" data-i18n="break.countdownLabel">剩余时间</span>
+                <strong class="countdown-value" id="countdown-value">00:00</strong>
+            </div>
+            <div class="progress-track">
+                <div class="progress-fill"></div>
+            </div>
+        </footer>
+
+        <!-- Completion Panel (Toggle display via JS in real app) -->
+        <div class="completion-panel">
+            <p style="color:var(--text-secondary); font-size:18px; letter-spacing:1px;" data-i18n="break.completion">
+                本轮休息已完成，状态正在回到最佳节律。
+            </p>
+            <button class="rt-btn" id="finish-btn" data-i18n="break.finish">返回工作</button>
+        </div>
+
+    </div>
+
+    <script>
+        const { listen } = window.__TAURI__.event
+        const { invoke, convertFileSrc } = window.__TAURI__.core
+        const configApi = window.vitalityConfig
+        const i18nApi = window.vitalityI18n
+        const tauriWindowApi = window.__TAURI__.window
+
+        const PRIMARY_BREAK_WINDOW_LABEL = 'break_window_0'
+        const PROGRESS_SYNC_INTERVAL_MS = 800
+
+        let currentConfig = configApi.getCachedConfig()
+        let currentMediaState = null
+        let suppressMediaEvents = false
+        let timelineIntervalId = null
+        let completionVisible = false
+        let lastProgressSyncAt = 0
+
+        function t(key, params = {}) {
+            return i18nApi.t(key, currentConfig.language, params)
+        }
+
+        function getCurrentWindowHandle() {
+            if (tauriWindowApi && typeof tauriWindowApi.getCurrentWindow === 'function') {
+                return tauriWindowApi.getCurrentWindow()
+            }
+
+            return null
+        }
+
+        function isPrimaryBreakWindow() {
+            const currentWindow = getCurrentWindowHandle()
+            return Boolean(currentWindow && currentWindow.label === PRIMARY_BREAK_WINDOW_LABEL)
+        }
+
+        function applyLanguage(language) {
+            const normalizedLanguage = i18nApi.applyI18n(language)
+            document.title = i18nApi.t('break.documentTitle', normalizedLanguage)
+            currentConfig = {
+                ...currentConfig,
+                language: normalizedLanguage
+            }
+            return normalizedLanguage
+        }
+
+        function formatCountdown(totalSeconds) {
+            const safeSeconds = Math.max(0, Math.ceil(Number(totalSeconds) || 0))
+            const hours = Math.floor(safeSeconds / 3600)
+            const mins = Math.floor((safeSeconds % 3600) / 60)
+            const secs = safeSeconds % 60
+
+            if (hours > 0) {
+                return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+            }
+
+            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+        }
+
+        function clamp01(value) {
+            const numericValue = Number(value)
+            if (!Number.isFinite(numericValue)) {
+                return 0
+            }
+            return Math.max(0, Math.min(1, numericValue))
+        }
+
+        function renderIcons() {
+            if (window.lucide && typeof window.lucide.createIcons === 'function') {
+                window.lucide.createIcons()
+            }
+        }
+
+        function closeAllWindows() {
+            invoke('close_breaks').catch(console.error)
+        }
+
+        function stopTimelineLoop() {
+            if (timelineIntervalId) {
+                window.clearInterval(timelineIntervalId)
+                timelineIntervalId = null
+            }
+        }
+
+        function showCompletion(panel) {
+            if (completionVisible) {
+                return
+            }
+
+            panel.classList.add('active')
+            completionVisible = true
+        }
+
+        function hideCompletion(panel) {
+            if (!completionVisible) {
+                return
+            }
+
+            panel.classList.remove('active')
+            completionVisible = false
+        }
+
+        function setMediaFullscreen(enabled) {
+            const overlay = document.querySelector('.ritual-overlay')
+            const vessel = document.querySelector('.media-vessel')
+
+            vessel.classList.toggle('fullscreen', enabled)
+            overlay.classList.toggle('media-fullscreen', enabled)
+        }
+
+        function resolveFullscreenFitMode(nextState) {
+            return nextState?.fullscreenFitMode === 'contain'
+                ? 'contain'
+                : (currentConfig.fullscreenFitMode === 'contain' ? 'contain' : 'cover')
+        }
+
+        function applyVideoFitMode(videoElement, nextState) {
+            const fitMode = nextState?.fullscreen
+                ? resolveFullscreenFitMode(nextState)
+                : 'cover'
+            videoElement.style.objectFit = fitMode
+        }
+
+        function updateMuteButton(button, muted) {
+            button.innerHTML = muted
+                ? '<i data-lucide="volume-x"></i>'
+                : '<i data-lucide="volume-2"></i>'
+            renderIcons()
+        }
+
+        function updatePlayButton(button, paused) {
+            button.innerHTML = paused
+                ? '<i data-lucide="play"></i>'
+                : '<i data-lucide="pause"></i>'
+            renderIcons()
+        }
+
+        function updateFullscreenButton(button, fullscreen) {
+            button.innerHTML = fullscreen
+                ? '<i data-lucide="minimize"></i>'
+                : '<i data-lucide="maximize"></i>'
+            renderIcons()
+        }
+
+        function resolveBreakStrategy() {
+            return currentMediaState?.breakStrategy === 'fixed'
+                ? 'fixed'
+                : (currentConfig.breakStrategy === 'fixed' ? 'fixed' : 'video')
+        }
+
+        function resolveBreakDurationSeconds() {
+            const fromState = Number(currentMediaState?.breakDurationSeconds)
+            if (Number.isFinite(fromState) && fromState > 0) {
+                return fromState
+            }
+
+            return Math.max(1, Number(currentConfig.breakMinutes) || 1) * 60
+        }
+
+        function updateTimeline(videoElement, progressFill, countdownValue, completionPanel) {
+            const strategy = resolveBreakStrategy()
+            let progress = 0
+            let remainingSeconds = 0
+            let complete = false
+
+            if (strategy === 'fixed') {
+                const totalSeconds = resolveBreakDurationSeconds()
+                const startedAtMs = Number(currentMediaState?.sessionStartedAtMs) || Date.now()
+                const elapsedSeconds = Math.max(0, (Date.now() - startedAtMs) / 1000)
+
+                remainingSeconds = Math.max(0, totalSeconds - elapsedSeconds)
+                progress = totalSeconds > 0 ? elapsedSeconds / totalSeconds : 0
+                complete = totalSeconds > 0 && remainingSeconds <= 0.05
+            } else {
+                const duration = Number.isFinite(videoElement.duration) ? videoElement.duration : 0
+                const currentTime = Number.isFinite(videoElement.currentTime) ? videoElement.currentTime : 0
+
+                remainingSeconds = duration > 0 ? Math.max(0, duration - currentTime) : 0
+                progress = duration > 0 ? currentTime / duration : 0
+                complete = duration > 0 && (videoElement.ended || remainingSeconds <= 0.2)
+            }
+
+            progressFill.style.width = `${(clamp01(progress) * 100).toFixed(2)}%`
+            countdownValue.textContent = formatCountdown(remainingSeconds)
+
+            if (complete) {
+                showCompletion(completionPanel)
+            } else {
+                hideCompletion(completionPanel)
+            }
+        }
+
+        function startTimelineLoop(videoElement, progressFill, countdownValue, completionPanel) {
+            stopTimelineLoop()
+            updateTimeline(videoElement, progressFill, countdownValue, completionPanel)
+            timelineIntervalId = window.setInterval(() => {
+                updateTimeline(videoElement, progressFill, countdownValue, completionPanel)
+            }, 250)
+        }
+
+        async function publishMediaState(videoElement, patch = {}) {
+            const nextBreakStrategy = patch.breakStrategy || currentMediaState?.breakStrategy || currentConfig.breakStrategy
+            const patchedDuration = Number(patch.breakDurationSeconds)
+            const currentDuration = Number(currentMediaState?.breakDurationSeconds)
+            const nextState = {
+                videoPath: currentMediaState?.videoPath || '',
+                muted: videoElement.muted,
+                paused: videoElement.paused,
+                fullscreen: Boolean(currentMediaState?.fullscreen),
+                fullscreenFitMode: currentMediaState?.fullscreenFitMode || currentConfig.fullscreenFitMode || 'cover',
+                currentTime: videoElement.currentTime || 0,
+                breakStrategy: nextBreakStrategy,
+                breakDurationSeconds: Number.isFinite(patchedDuration) && patchedDuration > 0
+                    ? patchedDuration
+                    : (Number.isFinite(currentDuration) && currentDuration > 0
+                        ? currentDuration
+                        : (nextBreakStrategy === 'fixed' ? resolveBreakDurationSeconds() : 0)),
+                sessionStartedAtMs: currentMediaState?.sessionStartedAtMs || Date.now(),
+                updatedAtMs: Date.now(),
+                ...patch
+            }
+
+            currentMediaState = await invoke('update_break_media_state', { state: nextState })
+            return currentMediaState
+        }
+
+        async function syncVideoPlayback(videoElement, nextState, recoverOverlay) {
+            if (!nextState.videoPath) {
+                videoElement.pause()
+                recoverOverlay.style.display = 'none'
+                return
+            }
+
+            if (nextState.paused) {
+                videoElement.pause()
+                return
+            }
+
+            try {
+                await videoElement.play()
+                recoverOverlay.style.display = 'none'
+            } catch (error) {
+                console.error('同步播放失败，降级为静音恢复模式。', error)
+                videoElement.muted = true
+                recoverOverlay.style.display = 'block'
+            }
+        }
+
+        function resolveSyncedTime(videoElement, nextState) {
+            const duration = Number.isFinite(videoElement.duration) ? videoElement.duration : 0
+            const lagSeconds = nextState.paused
+                ? 0
+                : Math.max(0, (Date.now() - Number(nextState.updatedAtMs || 0)) / 1000)
+            const rawTargetTime = Math.max(0, Number(nextState.currentTime || 0) + lagSeconds)
+
+            if (duration > 0 && nextState.breakStrategy === 'fixed' && videoElement.loop) {
+                return rawTargetTime % duration
+            }
+
+            if (duration > 0) {
+                return Math.min(rawTargetTime, duration)
+            }
+
+            return rawTargetTime
+        }
+
+        async function applyMediaState(
+            videoElement,
+            placeholder,
+            recoverOverlay,
+            muteButton,
+            playButton,
+            fullscreenButton,
+            nextState
+        ) {
+            currentMediaState = nextState
+            videoElement.loop = nextState.breakStrategy === 'fixed'
+            suppressMediaEvents = true
+
+            if (nextState.videoPath) {
+                const assetUrl = convertFileSrc(nextState.videoPath)
+                if (videoElement.dataset.videoPath !== nextState.videoPath) {
+                    videoElement.dataset.videoPath = nextState.videoPath
+                    videoElement.src = assetUrl
+                }
+                videoElement.style.display = 'block'
+                placeholder.style.display = 'none'
+            } else {
+                videoElement.pause()
+                videoElement.removeAttribute('src')
+                videoElement.load()
+                videoElement.dataset.videoPath = ''
+                videoElement.style.display = 'none'
+                placeholder.style.display = 'flex'
+            }
+
+            videoElement.muted = nextState.muted
+            setMediaFullscreen(nextState.fullscreen)
+            applyVideoFitMode(videoElement, nextState)
+
+            if (nextState.videoPath) {
+                const targetTime = resolveSyncedTime(videoElement, nextState)
+                if (Math.abs((videoElement.currentTime || 0) - targetTime) > 0.35) {
+                    try {
+                        videoElement.currentTime = targetTime
+                    } catch (error) {
+                        console.warn('同步播放进度失败', error)
+                    }
+                }
+            }
+
+            updateMuteButton(muteButton, nextState.muted)
+            updatePlayButton(playButton, nextState.paused)
+            updateFullscreenButton(fullscreenButton, nextState.fullscreen)
+
+            await syncVideoPlayback(videoElement, nextState, recoverOverlay)
+            suppressMediaEvents = false
+        }
+
+        async function maybePublishPlaybackProgress(videoElement) {
+            if (suppressMediaEvents || !currentMediaState || !isPrimaryBreakWindow()) {
+                return
+            }
+
+            if (resolveBreakStrategy() !== 'video' || videoElement.paused || !videoElement.src) {
+                return
+            }
+
+            const now = Date.now()
+            if (now - lastProgressSyncAt < PROGRESS_SYNC_INTERVAL_MS) {
+                return
+            }
+
+            lastProgressSyncAt = now
+            await publishMediaState(videoElement, {
+                paused: false,
+                currentTime: videoElement.currentTime || 0,
+                updatedAtMs: now
+            })
+        }
+
+        async function bootstrap() {
+            currentConfig = await configApi.loadConfig()
+            applyLanguage(currentConfig.language)
+
+            const dynamicIsland = document.querySelector('.dynamic-island')
+            const completionPanel = document.querySelector('.completion-panel')
+            const videoElement = document.getElementById('meditation-video')
+            const vesselElement = document.querySelector('.media-vessel')
+            const placeholder = document.getElementById('video-placeholder')
+            const recoverOverlay = document.getElementById('audio-recover-overlay')
+            const volumeButton = document.getElementById('btn-toggle-mute')
+            const playButton = document.getElementById('btn-toggle-play')
+            const fullscreenButton = document.getElementById('btn-toggle-fullscreen')
+            const postponeButton = document.getElementById('btn-postpone')
+            const skipButton = document.getElementById('skip-btn')
+            const finishButton = document.getElementById('finish-btn')
+            const progressFill = document.querySelector('.progress-fill')
+            const countdownValue = document.getElementById('countdown-value')
+            const unlistenBreakState = await listen('break-media-state-changed', async (event) => {
+                await applyMediaState(
+                    videoElement,
+                    placeholder,
+                    recoverOverlay,
+                    volumeButton,
+                    playButton,
+                    fullscreenButton,
+                    event.payload
+                )
+                updateTimeline(videoElement, progressFill, countdownValue, completionPanel)
+            })
+
+            renderIcons()
+            currentMediaState = await invoke('get_break_media_state')
+
+            skipButton.addEventListener('click', closeAllWindows)
+            finishButton.addEventListener('click', closeAllWindows)
+            postponeButton.addEventListener('click', () => {
+                invoke('postpone_break', { delaySeconds: 5 * 60 }).catch((error) => {
+                    console.error('推迟休息失败', error)
+                    alert(String(error))
+                })
+            })
+
+            if (currentConfig.strictMode) {
+                dynamicIsland.style.display = 'none'
+            } else {
+                dynamicIsland.style.display = 'flex'
+
+                volumeButton.addEventListener('click', async () => {
+                    await publishMediaState(videoElement, {
+                        muted: !currentMediaState.muted
+                    })
+                })
+
+                playButton.addEventListener('click', async () => {
+                    await publishMediaState(videoElement, {
+                        paused: !currentMediaState.paused,
+                        currentTime: videoElement.currentTime || 0
+                    })
+                })
+
+                fullscreenButton.addEventListener('click', async () => {
+                    await publishMediaState(videoElement, {
+                        fullscreen: !currentMediaState.fullscreen
+                    })
+                })
+            }
+
+            vesselElement.addEventListener('click', async () => {
+                if (recoverOverlay.style.display === 'block') {
+                    await publishMediaState(videoElement, { muted: false })
+                    return
+                }
+
+                await publishMediaState(videoElement, {
+                    fullscreen: !currentMediaState.fullscreen
+                })
+            })
+
+            if (!currentMediaState.videoPath) {
+                console.warn('未配置视频源，休息页将保持占位态。')
+            }
+
+            videoElement.volume = 1.0
+            await applyMediaState(
+                videoElement,
+                placeholder,
+                recoverOverlay,
+                volumeButton,
+                playButton,
+                fullscreenButton,
+                currentMediaState
+            )
+
+            startTimelineLoop(videoElement, progressFill, countdownValue, completionPanel)
+
+            videoElement.addEventListener('loadedmetadata', () => {
+                updateTimeline(videoElement, progressFill, countdownValue, completionPanel)
+                if (
+                    isPrimaryBreakWindow()
+                    && resolveBreakStrategy() === 'video'
+                    && Number.isFinite(videoElement.duration)
+                    && videoElement.duration > 0
+                ) {
+                    publishMediaState(videoElement, {
+                        breakDurationSeconds: videoElement.duration
+                    }).catch(console.error)
+                }
+            })
+
+            videoElement.addEventListener('durationchange', () => {
+                updateTimeline(videoElement, progressFill, countdownValue, completionPanel)
+            })
+
+            videoElement.addEventListener('seeked', () => {
+                updateTimeline(videoElement, progressFill, countdownValue, completionPanel)
+            })
+
+            videoElement.addEventListener('timeupdate', () => {
+                updateTimeline(videoElement, progressFill, countdownValue, completionPanel)
+                maybePublishPlaybackProgress(videoElement).catch(console.error)
+            })
+
+            videoElement.addEventListener('pause', async () => {
+                updateTimeline(videoElement, progressFill, countdownValue, completionPanel)
+                if (suppressMediaEvents) return
+                await publishMediaState(videoElement, {
+                    paused: true,
+                    currentTime: videoElement.currentTime || 0
+                })
+            })
+
+            videoElement.addEventListener('play', async () => {
+                updateTimeline(videoElement, progressFill, countdownValue, completionPanel)
+                if (suppressMediaEvents) return
+                await publishMediaState(videoElement, {
+                    paused: false,
+                    currentTime: videoElement.currentTime || 0
+                })
+            })
+
+            videoElement.addEventListener('volumechange', async () => {
+                if (suppressMediaEvents) return
+                await publishMediaState(videoElement, {
+                    muted: videoElement.muted
+                })
+            })
+
+            videoElement.addEventListener('ended', async () => {
+                updateTimeline(videoElement, progressFill, countdownValue, completionPanel)
+                showCompletion(completionPanel)
+
+                if (suppressMediaEvents || !isPrimaryBreakWindow() || resolveBreakStrategy() !== 'video') {
+                    return
+                }
+
+                await publishMediaState(videoElement, {
+                    paused: true,
+                    currentTime: videoElement.duration || videoElement.currentTime || 0
+                })
+            })
+
+            window.addEventListener('beforeunload', () => {
+                stopTimelineLoop()
+                unlistenBreakState()
+            }, { once: true })
+        }
+
+        bootstrap().catch((error) => {
+            console.error('休息页初始化失败', error)
+        })
+    </script>
+</body>
+
+</html>
