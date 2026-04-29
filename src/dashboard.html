@@ -20,6 +20,7 @@
             <div class="brand">
                 <div class="gold-dot"></div>
                 <span data-i18n="app.name">元气守恒·筑基令</span>
+                <span class="version-pill" id="app-version-pill">v0.1.7</span>
             </div>
         </div>
     </header>
@@ -266,6 +267,50 @@
                     <p data-i18n="system.description">管理开机自启、快捷键与语言等系统能力。</p>
                     <div class="setting-row" style="margin-top: 16px;">
                         <div class="setting-info">
+                            <h3 data-i18n="system.versionTitle">版本与更新</h3>
+                            <p data-i18n="system.versionDesc">在控制中心查看当前版本，并通过 GitHub Releases 检查和安装更新。</p>
+                            <div class="version-meta-strip">
+                                <span class="version-badge" id="app-version-display">v0.1.7</span>
+                                <span class="source-badge" data-i18n="system.updateSourceGithub">GitHub Releases</span>
+                            </div>
+                        </div>
+                        <div class="settings-action-group">
+                            <button type="button" class="action-button accent" id="btn-check-updates"
+                                data-i18n="system.checkUpdates">检查更新</button>
+                        </div>
+                    </div>
+                    <div class="update-status-panel" id="update-status-panel">
+                        <div class="update-status-header">
+                            <div class="update-status-copy">
+                                <div class="update-status-label" data-i18n="system.updateStatusTitle">更新状态</div>
+                                <div class="update-status-text" id="update-status-text" data-i18n="system.updateStatusIdle">尚未检查更新</div>
+                                <div class="update-status-meta" id="update-status-meta">当前版本：v0.1.7</div>
+                            </div>
+                            <div class="settings-action-group">
+                                <button type="button" class="action-button accent" id="btn-install-update" hidden
+                                    data-i18n="system.installUpdate">下载并安装</button>
+                            </div>
+                        </div>
+                        <p class="update-status-notes" id="update-status-notes" hidden></p>
+                        <div class="update-progress" id="update-progress" hidden>
+                            <div class="update-progress-bar">
+                                <span id="update-progress-bar-fill"></span>
+                            </div>
+                            <div class="update-progress-text" id="update-progress-text"></div>
+                        </div>
+                    </div>
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <h3 data-i18n="system.autoCheckUpdatesTitle">启动时自动检查更新</h3>
+                            <p data-i18n="system.autoCheckUpdatesDesc">应用启动后在后台检查 GitHub 上的新版本。</p>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="setting-auto-check-updates-enabled">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="setting-row">
+                        <div class="setting-info">
                             <h3 data-i18n="system.languageTitle">界面语言</h3>
                             <p data-i18n="system.languageDesc">切换控制台和休息页的显示语言，默认中文。</p>
                         </div>
@@ -323,9 +368,27 @@
 
         let currentConfig = configApi.getCachedConfig()
         let playlistSortable = null
+        let runtimeInfo = {
+            version: '0.1.7'
+        }
+        let updateUiState = {
+            phase: 'idle',
+            auto: false,
+            currentVersion: '0.1.7',
+            latestVersion: '',
+            notes: '',
+            publishedAt: '',
+            progressPercent: null,
+            errorMessage: ''
+        }
 
         function t(key, params = {}) {
             return i18nApi.t(key, currentConfig.language, params)
+        }
+
+        function formatVersionLabel(version) {
+            const normalized = String(version || '').trim().replace(/^v/i, '')
+            return normalized ? `v${normalized}` : '--'
         }
 
         function formatClockDuration(totalSeconds) {
@@ -349,6 +412,7 @@
                 language: normalizedLanguage
             }
             syncLanguagePicker()
+            renderUpdatePanel()
 
             return normalizedLanguage
         }
@@ -390,11 +454,152 @@
             document.getElementById('video-count-display').textContent = t('media.count', { count })
         }
 
+        function setVersionDisplays(version) {
+            const label = formatVersionLabel(version)
+            const versionPill = document.getElementById('app-version-pill')
+            const versionDisplay = document.getElementById('app-version-display')
+
+            if (versionPill) {
+                versionPill.textContent = label
+            }
+
+            if (versionDisplay) {
+                versionDisplay.textContent = label
+            }
+        }
+
         function renderPlaylistMessage(playlist, key) {
             playlist.innerHTML = ''
             const item = document.createElement('li')
             item.textContent = t(key)
             playlist.appendChild(item)
+        }
+
+        function formatPublishedAt(value) {
+            if (!value) {
+                return ''
+            }
+
+            const date = new Date(value)
+            if (Number.isNaN(date.getTime())) {
+                return String(value)
+            }
+
+            return date.toLocaleString(currentConfig.language === 'en-US' ? 'en-US' : 'zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            })
+        }
+
+        function setUpdateUiState(patch) {
+            updateUiState = {
+                ...updateUiState,
+                ...patch
+            }
+            renderUpdatePanel()
+        }
+
+        function renderUpdatePanel() {
+            const statusText = document.getElementById('update-status-text')
+            const statusMeta = document.getElementById('update-status-meta')
+            const notes = document.getElementById('update-status-notes')
+            const installButton = document.getElementById('btn-install-update')
+            const checkButton = document.getElementById('btn-check-updates')
+            const progress = document.getElementById('update-progress')
+            const progressFill = document.getElementById('update-progress-bar-fill')
+            const progressText = document.getElementById('update-progress-text')
+
+            if (!statusText || !statusMeta || !notes || !installButton || !checkButton || !progress || !progressFill || !progressText) {
+                return
+            }
+
+            const currentVersion = updateUiState.currentVersion || runtimeInfo.version
+            const metaParts = [t('system.updateMetaCurrent', { version: String(currentVersion || '').replace(/^v/i, '') })]
+            let noteText = ''
+            let progressLabel = ''
+            let showProgress = false
+            let showInstallButton = false
+
+            if (updateUiState.phase === 'idle') {
+                statusText.textContent = t('system.updateStatusIdle')
+            } else if (updateUiState.phase === 'checking') {
+                statusText.textContent = t(
+                    updateUiState.auto ? 'system.updateStatusAutoChecking' : 'system.updateStatusChecking'
+                )
+            } else if (updateUiState.phase === 'upToDate') {
+                statusText.textContent = t('system.updateStatusUpToDate')
+                if (updateUiState.latestVersion) {
+                    metaParts.push(t('system.updateMetaLatest', {
+                        version: String(updateUiState.latestVersion).replace(/^v/i, '')
+                    }))
+                }
+            } else if (updateUiState.phase === 'available') {
+                statusText.textContent = t('system.updateStatusAvailable', {
+                    version: formatVersionLabel(updateUiState.latestVersion)
+                })
+                metaParts.push(t('system.updateMetaLatest', {
+                    version: String(updateUiState.latestVersion).replace(/^v/i, '')
+                }))
+                if (updateUiState.publishedAt) {
+                    metaParts.push(t('system.updateMetaPublishedAt', {
+                        value: formatPublishedAt(updateUiState.publishedAt)
+                    }))
+                }
+                noteText = updateUiState.notes || t('system.updateNoNotes')
+                showInstallButton = true
+            } else if (updateUiState.phase === 'downloading') {
+                statusText.textContent = t('system.updateStatusDownloading')
+                if (updateUiState.latestVersion) {
+                    metaParts.push(t('system.updateMetaLatest', {
+                        version: String(updateUiState.latestVersion).replace(/^v/i, '')
+                    }))
+                }
+                showProgress = true
+                const percent = Number.isFinite(Number(updateUiState.progressPercent))
+                    ? Math.max(0, Math.min(100, Number(updateUiState.progressPercent)))
+                    : 0
+                progressFill.style.width = `${percent}%`
+                progressLabel = t('system.updateDownloadProgress', {
+                    percent: percent.toFixed(0)
+                })
+            } else if (updateUiState.phase === 'installing') {
+                statusText.textContent = t('system.updateStatusInstalling')
+                if (updateUiState.latestVersion) {
+                    metaParts.push(t('system.updateMetaLatest', {
+                        version: String(updateUiState.latestVersion).replace(/^v/i, '')
+                    }))
+                }
+                showProgress = true
+                progressFill.style.width = '100%'
+                progressLabel = '100%'
+            } else if (updateUiState.phase === 'error') {
+                statusText.textContent = t('system.updateStatusError')
+                noteText = updateUiState.errorMessage || ''
+            }
+
+            metaParts.push(t('system.updateMetaSource'))
+            statusMeta.textContent = metaParts.filter(Boolean).join(' · ')
+
+            installButton.hidden = !showInstallButton
+            const isBusy = updateUiState.phase === 'checking'
+                || updateUiState.phase === 'downloading'
+                || updateUiState.phase === 'installing'
+            checkButton.disabled = isBusy
+            installButton.disabled = isBusy
+
+            notes.hidden = !noteText
+            notes.textContent = noteText
+
+            progress.hidden = !showProgress
+            if (!showProgress) {
+                progressFill.style.width = '0%'
+                progressText.textContent = ''
+            } else {
+                progressText.textContent = progressLabel
+            }
         }
 
         function renderIcons() {
@@ -584,6 +789,7 @@
             const autostartToggle = document.getElementById('setting-autostart-enabled')
             const dndToggle = document.getElementById('setting-dnd-enabled')
             const naturalBreaksToggle = document.getElementById('setting-natural-breaks-enabled')
+            const autoCheckUpdatesToggle = document.getElementById('setting-auto-check-updates-enabled')
             const languagePicker = document.getElementById('setting-language-picker')
             const languageTrigger = document.getElementById('setting-language-trigger')
             const languageMenu = document.getElementById('setting-language-menu')
@@ -595,6 +801,7 @@
             autostartToggle.checked = currentConfig.autostartEnabled
             dndToggle.checked = currentConfig.dndEnabled
             naturalBreaksToggle.checked = currentConfig.naturalBreaksEnabled
+            autoCheckUpdatesToggle.checked = currentConfig.autoCheckUpdatesEnabled
             syncLanguagePicker()
 
             invoke('get_autostart_enabled')
@@ -642,6 +849,10 @@
 
             naturalBreaksToggle.addEventListener('change', async (event) => {
                 await persistConfig({ naturalBreaksEnabled: event.target.checked })
+            })
+
+            autoCheckUpdatesToggle.addEventListener('change', async (event) => {
+                await persistConfig({ autoCheckUpdatesEnabled: event.target.checked })
             })
 
             languageTrigger.addEventListener('click', (event) => {
@@ -694,6 +905,126 @@
                         await persistConfig({ fullscreenFitMode: event.target.value })
                     }
                 })
+            })
+        }
+
+        async function loadRuntimeInfo() {
+            const info = await invoke('get_runtime_info')
+            runtimeInfo = info || runtimeInfo
+            updateUiState.currentVersion = runtimeInfo.version || updateUiState.currentVersion
+            setVersionDisplays(runtimeInfo.version)
+            renderUpdatePanel()
+        }
+
+        async function checkForUpdates({ auto = false } = {}) {
+            setUpdateUiState({
+                phase: 'checking',
+                auto,
+                latestVersion: '',
+                notes: '',
+                publishedAt: '',
+                progressPercent: null,
+                errorMessage: ''
+            })
+
+            try {
+                const result = await invoke('check_for_updates')
+                if (result && result.available) {
+                    setUpdateUiState({
+                        phase: 'available',
+                        auto: false,
+                        latestVersion: result.version || '',
+                        notes: result.notes || '',
+                        publishedAt: result.publishedAt || '',
+                        errorMessage: ''
+                    })
+                    return
+                }
+
+                setUpdateUiState({
+                    phase: 'upToDate',
+                    auto: false,
+                    latestVersion: result && result.version ? result.version : runtimeInfo.version,
+                    notes: '',
+                    publishedAt: '',
+                    errorMessage: ''
+                })
+            } catch (error) {
+                setUpdateUiState({
+                    phase: 'error',
+                    auto: false,
+                    latestVersion: '',
+                    notes: '',
+                    publishedAt: '',
+                    progressPercent: null,
+                    errorMessage: String(error)
+                })
+            }
+        }
+
+        async function installUpdate() {
+            setUpdateUiState({
+                phase: 'downloading',
+                auto: false,
+                progressPercent: 0,
+                errorMessage: ''
+            })
+
+            try {
+                const result = await invoke('install_update')
+                setUpdateUiState({
+                    phase: 'installing',
+                    latestVersion: result && result.version ? result.version : updateUiState.latestVersion,
+                    progressPercent: 100,
+                    errorMessage: ''
+                })
+            } catch (error) {
+                setUpdateUiState({
+                    phase: 'error',
+                    progressPercent: null,
+                    errorMessage: String(error)
+                })
+            }
+        }
+
+        function bindUpdateControls() {
+            const checkButton = document.getElementById('btn-check-updates')
+            const installButton = document.getElementById('btn-install-update')
+
+            if (checkButton) {
+                checkButton.addEventListener('click', async () => {
+                    await checkForUpdates()
+                })
+            }
+
+            if (installButton) {
+                installButton.addEventListener('click', async () => {
+                    await installUpdate()
+                })
+            }
+
+            listen('update-download-progress', (event) => {
+                const payload = event.payload || {}
+                const percent = Number.isFinite(Number(payload.percent))
+                    ? Number(payload.percent)
+                    : updateUiState.progressPercent
+
+                if (payload.stage === 'downloading') {
+                    setUpdateUiState({
+                        phase: 'downloading',
+                        latestVersion: payload.version || updateUiState.latestVersion,
+                        progressPercent: percent
+                    })
+                    return
+                }
+
+                if (payload.stage === 'installing') {
+                    setUpdateUiState({
+                        phase: 'installing',
+                        latestVersion: payload.version || updateUiState.latestVersion,
+                        progressPercent: 100
+                    })
+                }
             })
         }
 
@@ -868,10 +1199,15 @@
             bindThemeSelector()
             bindSettings()
             bindVideoSourceActions()
+            bindUpdateControls()
             applyTheme(currentConfig.theme)
+            await loadRuntimeInfo()
             updateTimerDisplay(await invoke('get_time_remaining'))
             setVideoCountDisplay(0)
             await refreshVideoList()
+            if (currentConfig.autoCheckUpdatesEnabled) {
+                void checkForUpdates({ auto: true })
+            }
         }
 
         bootstrap().catch((error) => {

@@ -6,6 +6,7 @@ use tauri::menu::{Menu, MenuItem, SubmenuBuilder};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{Emitter, Manager, PhysicalPosition, PhysicalSize, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_store::StoreExt;
+use tauri_plugin_updater::UpdaterExt;
 
 const APP_CONFIG_STORE_PATH: &str = "settings.json";
 const APP_CONFIG_KEY: &str = "app-config";
@@ -95,6 +96,7 @@ struct AppConfig {
     fullscreen: bool,
     fullscreen_fit_mode: String,
     autostart_enabled: bool,
+    auto_check_updates_enabled: bool,
     dnd_enabled: bool,
     natural_breaks_enabled: bool,
     work_minutes: u64,
@@ -114,6 +116,7 @@ impl Default for AppConfig {
             fullscreen: true,
             fullscreen_fit_mode: "cover".to_string(),
             autostart_enabled: true,
+            auto_check_updates_enabled: true,
             dnd_enabled: false,
             natural_breaks_enabled: true,
             work_minutes: DEFAULT_WORK_MINUTES,
@@ -350,6 +353,36 @@ impl BreakMediaState {
 
 struct BreakMediaStateStore {
     current: Mutex<BreakMediaState>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct RuntimeInfo {
+    version: String,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct UpdateCheckResult {
+    available: bool,
+    version: String,
+    current_version: String,
+    notes: String,
+    published_at: String,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct UpdateInstallResult {
+    version: String,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct UpdateProgressPayload {
+    stage: String,
+    version: String,
+    percent: Option<f64>,
 }
 
 fn resolve_window_label(label: Option<String>) -> String {
@@ -631,6 +664,102 @@ fn get_autostart_enabled(app: tauri::AppHandle) -> Result<bool, String> {
 }
 
 #[tauri::command]
+fn get_runtime_info(app: tauri::AppHandle) -> RuntimeInfo {
+    RuntimeInfo {
+        version: app.package_info().version.to_string(),
+    }
+}
+
+#[tauri::command]
+async fn check_for_updates(app: tauri::AppHandle) -> Result<UpdateCheckResult, String> {
+    let current_version = app.package_info().version.to_string();
+    let update = app
+        .updater()
+        .map_err(|error| error.to_string())?
+        .check()
+        .await
+        .map_err(|error| error.to_string())?;
+
+    if let Some(update) = update {
+        return Ok(UpdateCheckResult {
+            available: true,
+            version: update.version.clone(),
+            current_version: update.current_version.clone(),
+            notes: update.body.clone().unwrap_or_default(),
+            published_at: update
+                .date
+                .map(|value| value.to_string())
+                .unwrap_or_default(),
+        });
+    }
+
+    Ok(UpdateCheckResult {
+        available: false,
+        version: current_version.clone(),
+        current_version,
+        notes: String::new(),
+        published_at: String::new(),
+    })
+}
+
+#[tauri::command]
+async fn install_update(app: tauri::AppHandle) -> Result<UpdateInstallResult, String> {
+    let Some(update) = app
+        .updater()
+        .map_err(|error| error.to_string())?
+        .check()
+        .await
+        .map_err(|error| error.to_string())?
+    else {
+        return Err("当前没有可安装的新版本。".to_string());
+    };
+
+    let version = update.version.clone();
+    let progress_app = app.clone();
+    let progress_version = version.clone();
+    let finished_app = app.clone();
+    let finished_version = version.clone();
+    let mut downloaded = 0_u64;
+
+    update
+        .download_and_install(
+            move |chunk_length, content_length| {
+                downloaded = downloaded.saturating_add(chunk_length as u64);
+                let percent = content_length.and_then(|total| {
+                    if total == 0 {
+                        None
+                    } else {
+                        Some((downloaded as f64 / total as f64) * 100.0)
+                    }
+                });
+
+                let _ = progress_app.emit(
+                    "update-download-progress",
+                    UpdateProgressPayload {
+                        stage: "downloading".to_string(),
+                        version: progress_version.clone(),
+                        percent,
+                    },
+                );
+            },
+            move || {
+                let _ = finished_app.emit(
+                    "update-download-progress",
+                    UpdateProgressPayload {
+                        stage: "installing".to_string(),
+                        version: finished_version.clone(),
+                        percent: Some(100.0),
+                    },
+                );
+            },
+        )
+        .await
+        .map_err(|error| error.to_string())?;
+
+    Ok(UpdateInstallResult { version })
+}
+
+#[tauri::command]
 fn get_break_media_state(state: tauri::State<BreakMediaStateStore>) -> BreakMediaState {
     state.current.lock().unwrap().clone()
 }
@@ -797,6 +926,7 @@ pub fn run() {
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,
         ))
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_store::Builder::default().build())
@@ -1093,6 +1223,9 @@ pub fn run() {
             get_app_config,
             update_app_config,
             get_autostart_enabled,
+            get_runtime_info,
+            check_for_updates,
+            install_update,
             get_break_media_state,
             update_break_media_state,
             hide_main_window,

@@ -21,7 +21,7 @@ Many break reminders are easy to dismiss. Vitality Keeper is designed to be calm
 
 ## Screenshots
 
-> First-release screenshots will be updated with `v0.1.6`.
+> These screenshots are synchronized with the `v0.1.7` release.
 
 ![Dashboard overview](./docs/images/dashboard-overview.png)
 
@@ -31,10 +31,10 @@ Many break reminders are easy to dismiss. Vitality Keeper is designed to be calm
 
 ## Download
 
-The first public release focuses on Windows:
+The current public release focuses on Windows:
 
-- `vitality-keeper_0.1.6_x64-setup.exe`
-- `vitality-keeper_0.1.6_x64_en-US.msi`
+- `vitality-keeper_0.1.7_x64-setup.exe`
+- `vitality-keeper_0.1.7_x64_en-US.msi`
 
 Download the latest release from [GitHub Releases](https://github.com/qingmiao-tech/vitality-keeper/releases).
 
@@ -63,6 +63,12 @@ dev.bat
 
 ```bash
 npm run build
+```
+
+If you also need signed updater assets and `latest.json` for GitHub-based auto-updates, run:
+
+```bash
+npm run build:release
 ```
 
 Windows bundles are generated under:

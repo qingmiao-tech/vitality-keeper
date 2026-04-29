@@ -21,7 +21,7 @@
 
 ## 截图
 
-> 首发截图会随 `v0.1.6` 发布一起更新。
+> 当前截图会随 `v0.1.7` 发布一起同步。
 
 ![控制中心总览](./docs/images/dashboard-overview.png)
 
@@ -31,10 +31,10 @@
 
 ## 下载
 
-当前首发版本优先提供 Windows 安装包：
+当前公开版本优先提供 Windows 安装包：
 
-- `vitality-keeper_0.1.6_x64-setup.exe`
-- `vitality-keeper_0.1.6_x64_en-US.msi`
+- `vitality-keeper_0.1.7_x64-setup.exe`
+- `vitality-keeper_0.1.7_x64_en-US.msi`
 
 请到 [GitHub Releases](https://github.com/qingmiao-tech/vitality-keeper/releases) 下载最新版本。
 
@@ -63,6 +63,12 @@ dev.bat
 
 ```bash
 npm run build
+```
+
+如果需要生成 GitHub 自动更新所需的签名与 `latest.json`，请使用：
+
+```bash
+npm run build:release
 ```
 
 Windows 产物会生成在：

@@ -13,7 +13,8 @@
     disabledVideos: [],
     customVideoOrder: [],
     theme: 'dao',
-    language: 'zh-CN'
+    language: 'zh-CN',
+    autoCheckUpdatesEnabled: true
   })
 
   let cachedConfig = null
@@ -37,7 +38,8 @@
       disabledVideos: Array.isArray(value.disabledVideos) ? [...value.disabledVideos] : [],
       customVideoOrder: Array.isArray(value.customVideoOrder) ? [...value.customVideoOrder] : [],
       theme: value.theme === 'light' ? 'light' : 'dao',
-      language: value.language === 'en-US' ? 'en-US' : DEFAULT_CONFIG.language
+      language: value.language === 'en-US' ? 'en-US' : DEFAULT_CONFIG.language,
+      autoCheckUpdatesEnabled: value.autoCheckUpdatesEnabled !== false
     }
   }
 

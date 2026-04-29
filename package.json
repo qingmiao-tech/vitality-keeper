@@ -1,6 +1,6 @@
 {
   "name": "vitality-keeper",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "A lightweight Tauri break reminder with local video guidance and multi-display support.",
   "license": "MIT",
   "type": "module",
@@ -24,6 +24,8 @@
     "tauri": "tauri",
     "dev": "tauri dev",
     "build": "tauri build",
+    "build:release": "npm run build && node scripts/generate-latest-json.mjs",
+    "updater:manifest": "node scripts/generate-latest-json.mjs",
     "start": "npm run dev"
   },
   "devDependencies": {
