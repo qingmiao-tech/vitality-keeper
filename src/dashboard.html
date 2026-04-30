@@ -20,7 +20,7 @@
             <div class="brand">
                 <div class="gold-dot"></div>
                 <span data-i18n="app.name">元气守恒·筑基令</span>
-                <span class="version-pill" id="app-version-pill">v0.1.7</span>
+                    <span class="version-pill" id="app-version-pill">v0.1.8</span>
             </div>
         </div>
     </header>
@@ -270,7 +270,7 @@
                             <h3 data-i18n="system.versionTitle">版本与更新</h3>
                             <p data-i18n="system.versionDesc">在控制中心查看当前版本，并通过 GitHub Releases 检查和安装更新。</p>
                             <div class="version-meta-strip">
-                                <span class="version-badge" id="app-version-display">v0.1.7</span>
+                            <span class="version-badge" id="app-version-display">v0.1.8</span>
                                 <span class="source-badge" data-i18n="system.updateSourceGithub">GitHub Releases</span>
                             </div>
                         </div>
@@ -284,7 +284,7 @@
                             <div class="update-status-copy">
                                 <div class="update-status-label" data-i18n="system.updateStatusTitle">更新状态</div>
                                 <div class="update-status-text" id="update-status-text" data-i18n="system.updateStatusIdle">尚未检查更新</div>
-                                <div class="update-status-meta" id="update-status-meta">当前版本：v0.1.7</div>
+                        <div class="update-status-meta" id="update-status-meta">当前版本：v0.1.8</div>
                             </div>
                             <div class="settings-action-group">
                                 <button type="button" class="action-button accent" id="btn-install-update" hidden
@@ -308,6 +308,18 @@
                             <input type="checkbox" id="setting-auto-check-updates-enabled">
                             <span class="slider"></span>
                         </label>
+                    </div>
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <h3 data-i18n="system.copyStyleTitle">文案风格</h3>
+                            <p data-i18n="system.copyStyleDesc">默认保留当前更通用的表达，也可以切换为更接近早期版本、带一点道家气息的归元叙述。</p>
+                        </div>
+                        <div class="copy-style-group" id="setting-copy-style-group">
+                            <button type="button" class="copy-style-option" data-copy-style="balanced"
+                                data-i18n="system.copyStyleBalanced">平衡</button>
+                            <button type="button" class="copy-style-option" data-copy-style="tao"
+                                data-i18n="system.copyStyleTao">归元</button>
+                        </div>
                     </div>
                     <div class="setting-row">
                         <div class="setting-info">
@@ -348,10 +360,19 @@
                             <h3 data-i18n="system.shortcutTitle">全局热键</h3>
                             <p data-i18n="system.shortcutDesc">按下 Ctrl + Alt + Q 快速重置休息周期</p>
                         </div>
-                        <label class="toggle-switch">
-                            <input type="checkbox" checked>
-                            <span class="slider"></span>
-                        </label>
+                        <div class="settings-action-group shortcut-actions">
+                            <div class="shortcut-cluster">
+                                <div class="shortcut-keycaps" aria-label="Ctrl Alt Q">
+                                    <span class="keycap">Ctrl</span>
+                                    <span class="keycap">Alt</span>
+                                    <span class="keycap">Q</span>
+                                </div>
+                                <span class="status-badge" id="shortcut-status-badge"
+                                    data-i18n="system.shortcutRegistered">已启用</span>
+                            </div>
+                            <button type="button" class="action-button" id="btn-reset-cycle"
+                                data-i18n="system.resetCycleAction">立即重置</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -369,12 +390,13 @@
         let currentConfig = configApi.getCachedConfig()
         let playlistSortable = null
         let runtimeInfo = {
-            version: '0.1.7'
+            version: '0.1.8',
+            resetCycleShortcutRegistered: false
         }
         let updateUiState = {
             phase: 'idle',
             auto: false,
-            currentVersion: '0.1.7',
+            currentVersion: '0.1.8',
             latestVersion: '',
             notes: '',
             publishedAt: '',
@@ -383,7 +405,7 @@
         }
 
         function t(key, params = {}) {
-            return i18nApi.t(key, currentConfig.language, params)
+            return i18nApi.t(key, currentConfig.language, params, currentConfig.copyStyle)
         }
 
         function formatVersionLabel(version) {
@@ -405,13 +427,15 @@
         }
 
         function applyLanguage(language) {
-            const normalizedLanguage = i18nApi.applyI18n(language)
-            document.title = i18nApi.t('dashboard.documentTitle', normalizedLanguage)
+            const normalizedLanguage = i18nApi.applyI18n(language, document, currentConfig.copyStyle)
+            document.title = i18nApi.t('dashboard.documentTitle', normalizedLanguage, {}, currentConfig.copyStyle)
             currentConfig = {
                 ...currentConfig,
                 language: normalizedLanguage
             }
             syncLanguagePicker()
+            syncCopyStyleButtons()
+            renderShortcutStatus()
             renderUpdatePanel()
 
             return normalizedLanguage
@@ -450,6 +474,14 @@
             })
         }
 
+        function syncCopyStyleButtons() {
+            document.querySelectorAll('[data-copy-style]').forEach((button) => {
+                const isSelected = button.getAttribute('data-copy-style') === currentConfig.copyStyle
+                button.classList.toggle('is-selected', isSelected)
+                button.setAttribute('aria-pressed', String(isSelected))
+            })
+        }
+
         function setVideoCountDisplay(count) {
             document.getElementById('video-count-display').textContent = t('media.count', { count })
         }
@@ -473,6 +505,20 @@
             const item = document.createElement('li')
             item.textContent = t(key)
             playlist.appendChild(item)
+        }
+
+        function renderShortcutStatus() {
+            const badge = document.getElementById('shortcut-status-badge')
+            if (!badge) {
+                return
+            }
+
+            const isRegistered = runtimeInfo.resetCycleShortcutRegistered === true
+            badge.textContent = isRegistered
+                ? t('system.shortcutRegistered')
+                : t('system.shortcutUnavailable')
+            badge.classList.toggle('is-ready', isRegistered)
+            badge.classList.toggle('is-error', !isRegistered)
         }
 
         function formatPublishedAt(value) {
@@ -790,6 +836,7 @@
             const dndToggle = document.getElementById('setting-dnd-enabled')
             const naturalBreaksToggle = document.getElementById('setting-natural-breaks-enabled')
             const autoCheckUpdatesToggle = document.getElementById('setting-auto-check-updates-enabled')
+            const copyStyleButtons = document.querySelectorAll('[data-copy-style]')
             const languagePicker = document.getElementById('setting-language-picker')
             const languageTrigger = document.getElementById('setting-language-trigger')
             const languageMenu = document.getElementById('setting-language-menu')
@@ -803,6 +850,7 @@
             naturalBreaksToggle.checked = currentConfig.naturalBreaksEnabled
             autoCheckUpdatesToggle.checked = currentConfig.autoCheckUpdatesEnabled
             syncLanguagePicker()
+            syncCopyStyleButtons()
 
             invoke('get_autostart_enabled')
                 .then((enabled) => {
@@ -853,6 +901,20 @@
 
             autoCheckUpdatesToggle.addEventListener('change', async (event) => {
                 await persistConfig({ autoCheckUpdatesEnabled: event.target.checked })
+            })
+
+            copyStyleButtons.forEach((button) => {
+                button.addEventListener('click', async (event) => {
+                    event.preventDefault()
+                    const copyStyle = button.getAttribute('data-copy-style')
+                    if (!copyStyle || copyStyle === currentConfig.copyStyle) {
+                        return
+                    }
+
+                    await persistConfig({ copyStyle })
+                    applyLanguage(currentConfig.language)
+                    await refreshVideoList()
+                })
             })
 
             languageTrigger.addEventListener('click', (event) => {
@@ -913,7 +975,17 @@
             runtimeInfo = info || runtimeInfo
             updateUiState.currentVersion = runtimeInfo.version || updateUiState.currentVersion
             setVersionDisplays(runtimeInfo.version)
+            renderShortcutStatus()
             renderUpdatePanel()
+        }
+
+        async function resetBreakCycle() {
+            try {
+                await invoke('reset_break_cycle')
+            } catch (error) {
+                console.error('重置休息周期失败', error)
+                alert(String(error))
+            }
         }
 
         async function checkForUpdates({ auto = false } = {}) {
@@ -990,6 +1062,7 @@
         function bindUpdateControls() {
             const checkButton = document.getElementById('btn-check-updates')
             const installButton = document.getElementById('btn-install-update')
+            const resetCycleButton = document.getElementById('btn-reset-cycle')
 
             if (checkButton) {
                 checkButton.addEventListener('click', async () => {
@@ -1000,6 +1073,12 @@
             if (installButton) {
                 installButton.addEventListener('click', async () => {
                     await installUpdate()
+                })
+            }
+
+            if (resetCycleButton) {
+                resetCycleButton.addEventListener('click', async () => {
+                    await resetBreakCycle()
                 })
             }
 

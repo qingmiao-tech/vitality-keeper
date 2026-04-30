@@ -21,7 +21,7 @@
 
 ## 截图
 
-> 当前截图会随 `v0.1.7` 发布一起同步。
+> 当前截图会随 `v0.1.8` 发布一起同步。
 
 ![控制中心总览](./docs/images/dashboard-overview.png)
 
@@ -33,8 +33,8 @@
 
 当前公开版本优先提供 Windows 安装包：
 
-- `vitality-keeper_0.1.7_x64-setup.exe`
-- `vitality-keeper_0.1.7_x64_en-US.msi`
+- `vitality-keeper_0.1.8_x64-setup.exe`
+- `vitality-keeper_0.1.8_x64_en-US.msi`
 
 请到 [GitHub Releases](https://github.com/qingmiao-tech/vitality-keeper/releases) 下载最新版本。
 

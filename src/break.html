@@ -335,7 +335,7 @@
         let lastProgressSyncAt = 0
 
         function t(key, params = {}) {
-            return i18nApi.t(key, currentConfig.language, params)
+            return i18nApi.t(key, currentConfig.language, params, currentConfig.copyStyle)
         }
 
         function getCurrentWindowHandle() {
@@ -352,11 +352,13 @@
         }
 
         function applyLanguage(language) {
-            const normalizedLanguage = i18nApi.applyI18n(language)
-            document.title = i18nApi.t('break.documentTitle', normalizedLanguage)
+            const normalizedCopyStyle = i18nApi.normalizeCopyStyle(currentConfig.copyStyle)
+            const normalizedLanguage = i18nApi.applyI18n(language, document, normalizedCopyStyle)
+            document.title = i18nApi.t('break.documentTitle', normalizedLanguage, {}, normalizedCopyStyle)
             currentConfig = {
                 ...currentConfig,
-                language: normalizedLanguage
+                language: normalizedLanguage,
+                copyStyle: normalizedCopyStyle
             }
             return normalizedLanguage
         }

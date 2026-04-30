@@ -21,7 +21,7 @@ Many break reminders are easy to dismiss. Vitality Keeper is designed to be calm
 
 ## Screenshots
 
-> These screenshots are synchronized with the `v0.1.7` release.
+> These screenshots are synchronized with the `v0.1.8` release.
 
 ![Dashboard overview](./docs/images/dashboard-overview.png)
 
@@ -33,8 +33,8 @@ Many break reminders are easy to dismiss. Vitality Keeper is designed to be calm
 
 The current public release focuses on Windows:
 
-- `vitality-keeper_0.1.7_x64-setup.exe`
-- `vitality-keeper_0.1.7_x64_en-US.msi`
+- `vitality-keeper_0.1.8_x64-setup.exe`
+- `vitality-keeper_0.1.8_x64_en-US.msi`
 
 Download the latest release from [GitHub Releases](https://github.com/qingmiao-tech/vitality-keeper/releases).
 

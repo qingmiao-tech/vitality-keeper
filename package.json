@@ -1,6 +1,6 @@
 {
   "name": "vitality-keeper",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "A lightweight Tauri break reminder with local video guidance and multi-display support.",
   "license": "MIT",
   "type": "module",

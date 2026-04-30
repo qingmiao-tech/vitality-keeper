@@ -14,6 +14,7 @@
     customVideoOrder: [],
     theme: 'dao',
     language: 'zh-CN',
+    copyStyle: 'balanced',
     autoCheckUpdatesEnabled: true
   })
 
@@ -39,6 +40,7 @@
       customVideoOrder: Array.isArray(value.customVideoOrder) ? [...value.customVideoOrder] : [],
       theme: value.theme === 'light' ? 'light' : 'dao',
       language: value.language === 'en-US' ? 'en-US' : DEFAULT_CONFIG.language,
+      copyStyle: value.copyStyle === 'tao' ? 'tao' : DEFAULT_CONFIG.copyStyle,
       autoCheckUpdatesEnabled: value.autoCheckUpdatesEnabled !== false
     }
   }

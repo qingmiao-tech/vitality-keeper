@@ -5,6 +5,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tauri::menu::{Menu, MenuItem, SubmenuBuilder};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{Emitter, Manager, PhysicalPosition, PhysicalSize, WebviewUrl, WebviewWindowBuilder};
+use tauri_plugin_global_shortcut::{Code, Modifiers, ShortcutState};
 use tauri_plugin_store::StoreExt;
 use tauri_plugin_updater::UpdaterExt;
 
@@ -107,6 +108,7 @@ struct AppConfig {
     custom_video_order: Vec<String>,
     theme: String,
     language: String,
+    copy_style: String,
 }
 
 impl Default for AppConfig {
@@ -127,6 +129,7 @@ impl Default for AppConfig {
             custom_video_order: Vec::new(),
             theme: "dao".to_string(),
             language: DEFAULT_LANGUAGE.to_string(),
+            copy_style: "balanced".to_string(),
         }
     }
 }
@@ -154,6 +157,11 @@ impl AppConfig {
             "en-US".to_string()
         } else {
             DEFAULT_LANGUAGE.to_string()
+        };
+        self.copy_style = if self.copy_style == "tao" {
+            "tao".to_string()
+        } else {
+            "balanced".to_string()
         };
         self.video_source = self.video_source.trim().to_string();
         self
@@ -270,6 +278,10 @@ struct AppConfigState {
     current: Mutex<AppConfig>,
 }
 
+struct ShortcutRegistrationState {
+    reset_cycle_registered: Mutex<bool>,
+}
+
 #[derive(Clone, Copy, Debug)]
 struct BreakFlowSession {
     active: bool,
@@ -359,6 +371,7 @@ struct BreakMediaStateStore {
 #[serde(rename_all = "camelCase")]
 struct RuntimeInfo {
     version: String,
+    reset_cycle_shortcut_registered: bool,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -464,10 +477,19 @@ fn finalize_break_flow(app: &tauri::AppHandle) {
     let state = app.state::<TimerState>();
     let work_duration = *state.work_duration.lock().unwrap();
     *state.time_remaining.lock().unwrap() = work_duration;
+    *state.is_paused.lock().unwrap() = false;
 
     clear_break_media_state(app);
     reset_break_flow_state(app);
     close_break_windows(app);
+    let _ = app.emit("timer-tick", work_duration);
+}
+
+fn reset_focus_cycle(app: &tauri::AppHandle) {
+    finalize_break_flow(app);
+    let state = app.state::<TimerState>();
+    let work_duration = *state.work_duration.lock().unwrap();
+    let _ = app.emit("focus-cycle-reset", work_duration);
 }
 
 fn postpone_current_break(app: &tauri::AppHandle, delay_seconds: u64) -> Result<(), String> {
@@ -665,8 +687,11 @@ fn get_autostart_enabled(app: tauri::AppHandle) -> Result<bool, String> {
 
 #[tauri::command]
 fn get_runtime_info(app: tauri::AppHandle) -> RuntimeInfo {
+    let shortcut_state = app.state::<ShortcutRegistrationState>();
+    let reset_cycle_shortcut_registered = *shortcut_state.reset_cycle_registered.lock().unwrap();
     RuntimeInfo {
         version: app.package_info().version.to_string(),
+        reset_cycle_shortcut_registered,
     }
 }
 
@@ -837,6 +862,11 @@ fn postpone_break(app: tauri::AppHandle, delay_seconds: Option<u64>) -> Result<(
 }
 
 #[tauri::command]
+fn reset_break_cycle(app: tauri::AppHandle) {
+    reset_focus_cycle(&app);
+}
+
+#[tauri::command]
 fn update_timer_settings(
     app: tauri::AppHandle,
     work_mins: u64,
@@ -939,6 +969,9 @@ pub fn run() {
         .manage(AppConfigState {
             current: Mutex::new(AppConfig::default()),
         })
+        .manage(ShortcutRegistrationState {
+            reset_cycle_registered: Mutex::new(false),
+        })
         .manage(BreakFlowState {
             current: Mutex::new(BreakFlowSession::default()),
         })
@@ -951,6 +984,32 @@ pub fn run() {
 
             if let Some(main_window) = app_handle.get_webview_window("main") {
                 apply_app_icon_to_window(&app_handle, &main_window);
+            }
+
+            #[cfg(desktop)]
+            {
+                let shortcut_plugin = tauri_plugin_global_shortcut::Builder::new()
+                    .with_shortcuts(["ctrl+alt+q"])?
+                    .with_handler(|app, shortcut, event| {
+                        if event.state == ShortcutState::Pressed
+                            && shortcut.matches(Modifiers::CONTROL | Modifiers::ALT, Code::KeyQ)
+                        {
+                            reset_focus_cycle(app);
+                        }
+                    })
+                    .build();
+
+                let registered = match app_handle.plugin(shortcut_plugin) {
+                    Ok(_) => true,
+                    Err(error) => {
+                        eprintln!(
+                            "全局热键 Ctrl+Alt+Q 注册失败，可能被其他应用占用或注册流程异常: {error}"
+                        );
+                        false
+                    }
+                };
+                let shortcut_state = app_handle.state::<ShortcutRegistrationState>();
+                *shortcut_state.reset_cycle_registered.lock().unwrap() = registered;
             }
 
             {
@@ -1234,6 +1293,7 @@ pub fn run() {
             control_window,
             close_breaks,
             postpone_break,
+            reset_break_cycle,
             update_timer_settings,
             get_random_video,
             get_video_count,

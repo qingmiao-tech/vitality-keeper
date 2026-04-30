@@ -569,6 +569,56 @@ body {
   flex-wrap: wrap;
 }
 
+.copy-style-group {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.copy-style-option {
+  min-height: 42px;
+  padding: 0 16px;
+  border-radius: 15px;
+  border: 1px solid var(--border-light);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.01)),
+    var(--bg-panel);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 12px 26px rgba(2, 6, 23, 0.14);
+}
+
+.copy-style-option:hover {
+  transform: translateY(-1px);
+  border-color: var(--border-accent);
+  color: var(--text-primary);
+}
+
+.copy-style-option:focus-visible {
+  outline: none;
+  border-color: var(--accent-green);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 0 0 4px rgba(16, 185, 129, 0.16);
+}
+
+.copy-style-option.is-selected {
+  color: #06281d;
+  border-color: rgba(16, 185, 129, 0.28);
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.94), rgba(16, 185, 129, 0.94));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 16px 30px rgba(16, 185, 129, 0.2);
+}
+
 .action-button {
   min-height: 42px;
   padding: 0 16px;
@@ -598,6 +648,75 @@ body {
   background: linear-gradient(135deg, rgba(251, 191, 36, 0.96), rgba(16, 185, 129, 0.96));
   border-color: rgba(251, 191, 36, 0.18);
   box-shadow: 0 16px 30px rgba(16, 185, 129, 0.2);
+}
+
+.shortcut-actions {
+  justify-content: flex-end;
+}
+
+.shortcut-cluster {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.shortcut-keycaps {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 16px;
+  border: 1px solid var(--border-light);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015)),
+    rgba(15, 23, 42, 0.48);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 14px 28px rgba(2, 6, 23, 0.18);
+}
+
+.keycap {
+  min-width: 40px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border-light);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.status-badge.is-ready {
+  color: #d1fae5;
+  border-color: rgba(16, 185, 129, 0.28);
+  background: rgba(6, 95, 70, 0.28);
+}
+
+.status-badge.is-error {
+  color: #fecaca;
+  border-color: rgba(239, 68, 68, 0.28);
+  background: rgba(127, 29, 29, 0.22);
 }
 
 .update-status-panel {
@@ -836,6 +955,34 @@ body {
     inset 0 1px 0 rgba(255, 255, 255, 0.95);
 }
 
+[data-theme="light"] .copy-style-option,
+[data-theme="light"] .shortcut-keycaps {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.55)),
+    var(--bg-panel);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    0 12px 30px rgba(148, 163, 184, 0.16);
+}
+
+[data-theme="light"] .keycap,
+[data-theme="light"] .status-badge {
+  background: rgba(255, 255, 255, 0.86);
+  border-color: rgba(148, 163, 184, 0.24);
+}
+
+[data-theme="light"] .status-badge.is-ready {
+  color: #065f46;
+  background: rgba(209, 250, 229, 0.92);
+  border-color: rgba(16, 185, 129, 0.22);
+}
+
+[data-theme="light"] .status-badge.is-error {
+  color: #991b1b;
+  background: rgba(254, 226, 226, 0.92);
+  border-color: rgba(239, 68, 68, 0.18);
+}
+
 .toggle-switch {
   position: relative;
   display: inline-block;
@@ -958,6 +1105,26 @@ input:checked+.slider:before {
 
   .settings-action-group {
     width: 100%;
+  }
+
+  .copy-style-group,
+  .shortcut-actions,
+  .language-picker {
+    width: 100%;
+  }
+
+  .shortcut-actions {
+    align-items: stretch;
+  }
+
+  .shortcut-cluster {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .shortcut-keycaps {
+    width: 100%;
+    justify-content: center;
   }
 
   .action-button {
