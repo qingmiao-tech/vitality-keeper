@@ -534,6 +534,11 @@ body {
   color: var(--text-secondary);
 }
 
+.setting-subtle-copy {
+  margin-top: 8px;
+  color: var(--text-muted);
+}
+
 .version-meta-strip {
   display: flex;
   align-items: center;
@@ -575,6 +580,68 @@ body {
   justify-content: flex-end;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.settings-section {
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border-light);
+}
+
+.settings-section:first-of-type {
+  margin-top: 18px;
+  padding-top: 0;
+  border-top: none;
+}
+
+.settings-section-header {
+  margin-bottom: 10px;
+}
+
+.settings-section-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border-light);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.settings-section-first-row {
+  padding-top: 6px;
+}
+
+.strategy-summary-card {
+  margin-top: 14px;
+  display: inline-flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(16, 185, 129, 0.18);
+  background:
+    radial-gradient(circle at top right, rgba(16, 185, 129, 0.12), transparent 48%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+}
+
+.strategy-summary-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.strategy-summary-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
 .copy-style-option {
@@ -643,6 +710,11 @@ body {
   opacity: 0.6;
 }
 
+.action-button.ghost {
+  background: transparent;
+  color: var(--text-secondary);
+}
+
 .action-button.accent {
   color: #06281d;
   background: linear-gradient(135deg, rgba(251, 191, 36, 0.96), rgba(16, 185, 129, 0.96));
@@ -656,67 +728,180 @@ body {
 
 .shortcut-cluster {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
   gap: 12px;
+  width: min(100%, 704px);
+}
+
+.shortcut-editor-shell {
+  min-width: 0;
+}
+
+.shortcut-editor-card {
+  padding: 16px 16px 14px;
+  border-radius: 22px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.015));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 10px 24px rgba(2, 6, 23, 0.1);
+}
+
+.shortcut-editor-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
   flex-wrap: wrap;
+}
+
+.shortcut-editor-caption {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
 }
 
 .shortcut-keycaps {
   display: inline-flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
-  padding: 8px 12px;
+  padding: 10px 12px;
   border-radius: 16px;
-  border: 1px solid var(--border-light);
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015)),
-    rgba(15, 23, 42, 0.48);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  background: rgba(15, 23, 42, 0.16);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  min-height: 54px;
+  width: 100%;
+}
+
+.shortcut-keycaps.is-recording {
+  border-color: rgba(251, 191, 36, 0.32);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 14px 28px rgba(2, 6, 23, 0.18);
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 0 0 1px rgba(251, 191, 36, 0.12);
 }
 
 .keycap {
-  min-width: 40px;
-  height: 28px;
-  padding: 0 10px;
-  border-radius: 10px;
-  border: 1px solid rgba(148, 163, 184, 0.24);
-  background: rgba(255, 255, 255, 0.08);
+  min-width: 44px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: rgba(255, 255, 255, 0.05);
   color: var(--text-primary);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.03em;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.shortcut-message-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.shortcut-input-hint,
+.shortcut-feedback {
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.shortcut-input-hint {
+  color: var(--text-muted);
+}
+
+.shortcut-feedback {
+  color: var(--text-secondary);
+  min-height: 20px;
+}
+
+.shortcut-feedback.is-success {
+  color: var(--accent-green);
+}
+
+.shortcut-feedback.is-error {
+  color: #fda4af;
+}
+
+.shortcut-action-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+
+.shortcut-action-row .action-button {
+  min-height: 40px;
+  padding: 0 14px;
+  border-color: rgba(148, 163, 184, 0.16);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: none;
+}
+
+.shortcut-action-row .action-button:hover:not(:disabled) {
+  transform: none;
+  border-color: rgba(148, 163, 184, 0.26);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+}
+
+.shortcut-action-row .action-button.ghost {
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.shortcut-action-row .action-button.accent {
+  color: var(--text-primary);
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.2);
+  box-shadow: none;
 }
 
 .status-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 32px;
+  min-height: 30px;
   padding: 0 12px;
   border-radius: 999px;
-  border: 1px solid var(--border-light);
-  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  background: rgba(255, 255, 255, 0.03);
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.04em;
 }
 
 .status-badge.is-ready {
-  color: #d1fae5;
-  border-color: rgba(16, 185, 129, 0.28);
-  background: rgba(6, 95, 70, 0.28);
+  color: #cfe9df;
+  border-color: rgba(16, 185, 129, 0.16);
+  background: rgba(16, 185, 129, 0.08);
 }
 
 .status-badge.is-error {
-  color: #fecaca;
-  border-color: rgba(239, 68, 68, 0.28);
-  background: rgba(127, 29, 29, 0.22);
+  color: #f5c2c7;
+  border-color: rgba(239, 68, 68, 0.16);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.status-badge.is-pending {
+  color: #f4deb0;
+  border-color: rgba(251, 191, 36, 0.16);
+  background: rgba(251, 191, 36, 0.08);
 }
 
 .update-status-panel {
@@ -965,22 +1150,80 @@ body {
     0 12px 30px rgba(148, 163, 184, 0.16);
 }
 
+[data-theme="light"] .shortcut-editor-card {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 250, 252, 0.86));
+  border-color: rgba(148, 163, 184, 0.18);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    0 12px 28px rgba(148, 163, 184, 0.12);
+}
+
 [data-theme="light"] .keycap,
 [data-theme="light"] .status-badge {
   background: rgba(255, 255, 255, 0.86);
   border-color: rgba(148, 163, 184, 0.24);
 }
 
+[data-theme="light"] .shortcut-keycaps {
+  background: rgba(241, 245, 249, 0.92);
+  border-color: rgba(148, 163, 184, 0.16);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+}
+
+[data-theme="light"] .shortcut-action-row .action-button {
+  background: rgba(255, 255, 255, 0.74);
+  border-color: rgba(148, 163, 184, 0.18);
+  color: #475569;
+}
+
+[data-theme="light"] .shortcut-action-row .action-button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.94);
+  border-color: rgba(100, 116, 139, 0.24);
+  color: #0f172a;
+}
+
+[data-theme="light"] .shortcut-action-row .action-button.ghost {
+  background: rgba(255, 255, 255, 0.52);
+  color: #64748b;
+}
+
+[data-theme="light"] .shortcut-action-row .action-button.accent {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.22);
+  color: #065f46;
+}
+
+[data-theme="light"] .settings-section-eyebrow {
+  background: rgba(255, 255, 255, 0.86);
+}
+
+[data-theme="light"] .strategy-summary-card {
+  background:
+    radial-gradient(circle at top right, rgba(16, 185, 129, 0.1), transparent 48%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.88), rgba(248, 250, 252, 0.78));
+  border-color: rgba(16, 185, 129, 0.16);
+}
+
+[data-theme="light"] .shortcut-feedback.is-error {
+  color: #dc2626;
+}
+
 [data-theme="light"] .status-badge.is-ready {
   color: #065f46;
-  background: rgba(209, 250, 229, 0.92);
-  border-color: rgba(16, 185, 129, 0.22);
+  background: rgba(209, 250, 229, 0.72);
+  border-color: rgba(16, 185, 129, 0.18);
 }
 
 [data-theme="light"] .status-badge.is-error {
   color: #991b1b;
-  background: rgba(254, 226, 226, 0.92);
-  border-color: rgba(239, 68, 68, 0.18);
+  background: rgba(254, 226, 226, 0.72);
+  border-color: rgba(239, 68, 68, 0.16);
+}
+
+[data-theme="light"] .status-badge.is-pending {
+  color: #92400e;
+  background: rgba(254, 243, 199, 0.72);
+  border-color: rgba(251, 191, 36, 0.18);
 }
 
 .toggle-switch {
@@ -1055,6 +1298,92 @@ input:checked+.slider:before {
   color: var(--text-secondary);
 }
 
+[dir="rtl"] {
+  text-align: right;
+}
+
+[dir="rtl"] .titlebar {
+  padding: 0 16px 0 128px;
+}
+
+[dir="rtl"] .titlebar .brand {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .floating-window-controls {
+  left: 12px;
+  right: auto;
+}
+
+[dir="rtl"] .app-layout {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .sidebar {
+  border-left: 1px solid var(--border-light);
+  border-right: none;
+}
+
+[dir="rtl"] .nav-item {
+  flex-direction: row-reverse;
+  justify-content: flex-end;
+  text-align: right;
+}
+
+[dir="rtl"] .hero-card {
+  border-left: none;
+  border-right: 4px solid var(--accent-gold);
+}
+
+[dir="rtl"] .hero-text,
+[dir="rtl"] .setting-info,
+[dir="rtl"] .glass-card h2,
+[dir="rtl"] .glass-card p,
+[dir="rtl"] .update-status-copy,
+[dir="rtl"] .shortcut-editor-card,
+[dir="rtl"] .shortcut-message-stack,
+[dir="rtl"] .strategy-summary-card,
+[dir="rtl"] .cat-status {
+  text-align: right;
+}
+
+[dir="rtl"] .stats-grid,
+[dir="rtl"] .setting-row,
+[dir="rtl"] .update-status-header,
+[dir="rtl"] .shortcut-editor-head,
+[dir="rtl"] .countdown-display {
+  direction: rtl;
+}
+
+[dir="rtl"] .language-trigger,
+[dir="rtl"] .language-option {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .language-menu {
+  left: 0;
+  right: auto;
+}
+
+[dir="rtl"] .shortcut-keycaps,
+[dir="rtl"] .shortcut-action-row {
+  justify-content: flex-start;
+}
+
+[dir="rtl"] .dynamic-island {
+  direction: rtl;
+}
+
+[dir="rtl"] .ritual-header h1 {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .progress-fill {
+  left: auto;
+  right: 0;
+  background: linear-gradient(90deg, var(--accent-gold), var(--accent-green));
+}
+
 /* SortableJS drag-and-drop styles */
 .sortable-ghost {
   opacity: 0.35;
@@ -1113,18 +1442,31 @@ input:checked+.slider:before {
     width: 100%;
   }
 
+  .strategy-summary-card {
+    width: 100%;
+  }
+
   .shortcut-actions {
     align-items: stretch;
   }
 
   .shortcut-cluster {
     width: 100%;
-    justify-content: space-between;
+    justify-content: stretch;
   }
 
   .shortcut-keycaps {
     width: 100%;
     justify-content: center;
+  }
+
+  .shortcut-action-row {
+    width: 100%;
+    align-items: stretch;
+  }
+
+  .shortcut-action-row {
+    justify-content: stretch;
   }
 
   .action-button {

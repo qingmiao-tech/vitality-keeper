@@ -1,4 +1,5 @@
 (() => {
+  const SUPPORTED_LANGUAGES = ['zh-CN', 'en-US', 'ar']
   const DEFAULT_CONFIG = Object.freeze({
     strictMode: false,
     fullscreen: true,
@@ -15,6 +16,7 @@
     theme: 'dao',
     language: 'zh-CN',
     copyStyle: 'balanced',
+    resetCycleShortcut: 'control+alt+KeyQ',
     autoCheckUpdatesEnabled: true
   })
 
@@ -39,8 +41,11 @@
       disabledVideos: Array.isArray(value.disabledVideos) ? [...value.disabledVideos] : [],
       customVideoOrder: Array.isArray(value.customVideoOrder) ? [...value.customVideoOrder] : [],
       theme: value.theme === 'light' ? 'light' : 'dao',
-      language: value.language === 'en-US' ? 'en-US' : DEFAULT_CONFIG.language,
+      language: SUPPORTED_LANGUAGES.includes(value.language) ? value.language : DEFAULT_CONFIG.language,
       copyStyle: value.copyStyle === 'tao' ? 'tao' : DEFAULT_CONFIG.copyStyle,
+      resetCycleShortcut: typeof value.resetCycleShortcut === 'string' && value.resetCycleShortcut.trim()
+        ? value.resetCycleShortcut.trim()
+        : DEFAULT_CONFIG.resetCycleShortcut,
       autoCheckUpdatesEnabled: value.autoCheckUpdatesEnabled !== false
     }
   }

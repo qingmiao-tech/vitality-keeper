@@ -5,7 +5,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tauri::menu::{Menu, MenuItem, SubmenuBuilder};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{Emitter, Manager, PhysicalPosition, PhysicalSize, WebviewUrl, WebviewWindowBuilder};
-use tauri_plugin_global_shortcut::{Code, Modifiers, ShortcutState};
+use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 use tauri_plugin_store::StoreExt;
 use tauri_plugin_updater::UpdaterExt;
 
@@ -17,6 +17,8 @@ const DEFAULT_POSTPONE_SECONDS: u64 = 5 * 60;
 const DEFAULT_LANGUAGE: &str = "zh-CN";
 const MAX_POSTPONES_PER_FLOW: u8 = 3;
 const WINDOWS_APP_USER_MODEL_ID: &str = "com.kingmo.vitality-keeper";
+const DEFAULT_RESET_CYCLE_SHORTCUT: &str = "control+alt+KeyQ";
+const ARABIC_LANGUAGE: &str = "ar";
 
 fn current_unix_ms() -> u64 {
     SystemTime::now()
@@ -109,6 +111,7 @@ struct AppConfig {
     theme: String,
     language: String,
     copy_style: String,
+    reset_cycle_shortcut: String,
 }
 
 impl Default for AppConfig {
@@ -130,6 +133,7 @@ impl Default for AppConfig {
             theme: "dao".to_string(),
             language: DEFAULT_LANGUAGE.to_string(),
             copy_style: "balanced".to_string(),
+            reset_cycle_shortcut: DEFAULT_RESET_CYCLE_SHORTCUT.to_string(),
         }
     }
 }
@@ -153,16 +157,18 @@ impl AppConfig {
         } else {
             "dao".to_string()
         };
-        self.language = if self.language == "en-US" {
-            "en-US".to_string()
-        } else {
-            DEFAULT_LANGUAGE.to_string()
+        self.language = match self.language.as_str() {
+            "en-US" => "en-US".to_string(),
+            ARABIC_LANGUAGE => ARABIC_LANGUAGE.to_string(),
+            _ => DEFAULT_LANGUAGE.to_string(),
         };
         self.copy_style = if self.copy_style == "tao" {
             "tao".to_string()
         } else {
             "balanced".to_string()
         };
+        self.reset_cycle_shortcut = normalize_reset_cycle_shortcut(&self.reset_cycle_shortcut)
+            .unwrap_or_else(|_| DEFAULT_RESET_CYCLE_SHORTCUT.to_string());
         self.video_source = self.video_source.trim().to_string();
         self
     }
@@ -172,9 +178,15 @@ fn is_english(config: &AppConfig) -> bool {
     config.language == "en-US"
 }
 
+fn is_arabic(config: &AppConfig) -> bool {
+    config.language == ARABIC_LANGUAGE
+}
+
 fn app_display_name(config: &AppConfig) -> &'static str {
     if is_english(config) {
         "Vitality Keeper"
+    } else if is_arabic(config) {
+        "حارس الحيوية"
     } else {
         "元气守恒·筑基令"
     }
@@ -183,6 +195,8 @@ fn app_display_name(config: &AppConfig) -> &'static str {
 fn tray_timer_label(config: &AppConfig, mins: u64, secs: u64) -> String {
     if is_english(config) {
         format!("⏱ Next break: {:02}:{:02}", mins, secs)
+    } else if is_arabic(config) {
+        format!("⏱ الاستراحة التالية خلال: {:02}:{:02}", mins, secs)
     } else {
         format!("⏱ 距离休息: {:02}:{:02}", mins, secs)
     }
@@ -191,6 +205,8 @@ fn tray_timer_label(config: &AppConfig, mins: u64, secs: u64) -> String {
 fn tray_show_label(config: &AppConfig) -> &'static str {
     if is_english(config) {
         "Dashboard"
+    } else if is_arabic(config) {
+        "لوحة التحكم"
     } else {
         "控制中心"
     }
@@ -199,6 +215,8 @@ fn tray_show_label(config: &AppConfig) -> &'static str {
 fn tray_start_break_label(config: &AppConfig) -> &'static str {
     if is_english(config) {
         "Start Break"
+    } else if is_arabic(config) {
+        "ابدأ الاستراحة الآن"
     } else {
         "开始筑基休息"
     }
@@ -207,6 +225,8 @@ fn tray_start_break_label(config: &AppConfig) -> &'static str {
 fn tray_skip_break_label(config: &AppConfig) -> &'static str {
     if is_english(config) {
         "Skip Current Break"
+    } else if is_arabic(config) {
+        "تخطي هذه الاستراحة"
     } else {
         "跳过本次休息"
     }
@@ -216,17 +236,23 @@ fn tray_postpone_menu_label(config: &AppConfig, active: bool, remaining_times: u
     if !active {
         if is_english(config) {
             "Postpone Break".to_string()
+        } else if is_arabic(config) {
+            "تأجيل الاستراحة".to_string()
         } else {
             "推迟休息".to_string()
         }
     } else if remaining_times > 0 {
         if is_english(config) {
             format!("Postpone Break ({} left)", remaining_times)
+        } else if is_arabic(config) {
+            format!("تأجيل الاستراحة (متبقي {} مرات)", remaining_times)
         } else {
             format!("推迟休息 (剩余 {} 次)", remaining_times)
         }
     } else if is_english(config) {
         format!("Postpone Break (limit {})", MAX_POSTPONES_PER_FLOW)
+    } else if is_arabic(config) {
+        format!("تأجيل الاستراحة (الحد الأقصى {} مرات)", MAX_POSTPONES_PER_FLOW)
     } else {
         format!("推迟休息 (上限 {} 次)", MAX_POSTPONES_PER_FLOW)
     }
@@ -235,6 +261,8 @@ fn tray_postpone_menu_label(config: &AppConfig, active: bool, remaining_times: u
 fn tray_postpone_option_label(config: &AppConfig, minutes: u64) -> String {
     if is_english(config) {
         format!("{} min", minutes)
+    } else if is_arabic(config) {
+        format!("تأجيل {} دقائق", minutes)
     } else {
         format!("{} 分钟", minutes)
     }
@@ -246,6 +274,11 @@ fn postpone_limit_reached_message(config: &AppConfig) -> String {
             "This break flow can be postponed at most {} times.",
             MAX_POSTPONES_PER_FLOW
         )
+    } else if is_arabic(config) {
+        format!(
+            "يمكن تأجيل جولة الاستراحة نفسها بحد أقصى {} مرات.",
+            MAX_POSTPONES_PER_FLOW
+        )
     } else {
         format!("同一轮休息流程最多只能推迟 {} 次。", MAX_POSTPONES_PER_FLOW)
     }
@@ -254,6 +287,8 @@ fn postpone_limit_reached_message(config: &AppConfig) -> String {
 fn no_pending_break_message(config: &AppConfig) -> String {
     if is_english(config) {
         "There is no active break flow to postpone.".to_string()
+    } else if is_arabic(config) {
+        "لا توجد استراحة نشطة يمكن تأجيلها حالياً.".to_string()
     } else {
         "当前没有可推迟的休息流程。".to_string()
     }
@@ -262,6 +297,8 @@ fn no_pending_break_message(config: &AppConfig) -> String {
 fn tray_quit_label(config: &AppConfig) -> &'static str {
     if is_english(config) {
         "Quit"
+    } else if is_arabic(config) {
+        "إنهاء"
     } else {
         "退出"
     }
@@ -280,6 +317,7 @@ struct AppConfigState {
 
 struct ShortcutRegistrationState {
     reset_cycle_registered: Mutex<bool>,
+    current_reset_cycle_shortcut: Mutex<String>,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -372,6 +410,7 @@ struct BreakMediaStateStore {
 struct RuntimeInfo {
     version: String,
     reset_cycle_shortcut_registered: bool,
+    reset_cycle_shortcut: String,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -531,6 +570,81 @@ fn sync_timer_state(app: &tauri::AppHandle, config: &AppConfig, reset_to_work_du
     }
 }
 
+fn normalize_reset_cycle_shortcut(value: &str) -> Result<String, String> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        return Err("请至少录入一个主键。".to_string());
+    }
+
+    let shortcut: Shortcut = trimmed
+        .parse()
+        .map_err(|error| format!("无效的快捷键组合：{error}"))?;
+    let normalized = shortcut.to_string();
+
+    if shortcut.mods.is_empty() {
+        return Err("请至少包含一个修饰键，例如 Ctrl、Alt、Shift 或 Win。".to_string());
+    }
+
+    Ok(normalized)
+}
+
+fn apply_reset_cycle_shortcut_registration(
+    app: &tauri::AppHandle,
+    next_shortcut: &str,
+) -> Result<bool, String> {
+    let normalized = normalize_reset_cycle_shortcut(next_shortcut)?;
+    let shortcut_state = app.state::<ShortcutRegistrationState>();
+    let previous_shortcut = shortcut_state
+        .current_reset_cycle_shortcut
+        .lock()
+        .unwrap()
+        .clone();
+    let was_registered = *shortcut_state.reset_cycle_registered.lock().unwrap();
+
+    if was_registered && previous_shortcut == normalized {
+        return Ok(true);
+    }
+
+    if was_registered && !previous_shortcut.is_empty() {
+        app.global_shortcut()
+            .unregister(previous_shortcut.as_str())
+            .map_err(|error| format!("注销旧快捷键失败：{error}"))?;
+    }
+
+    match app.global_shortcut().register(normalized.as_str()) {
+        Ok(_) => {
+            *shortcut_state.reset_cycle_registered.lock().unwrap() = true;
+            *shortcut_state.current_reset_cycle_shortcut.lock().unwrap() = normalized;
+            Ok(true)
+        }
+        Err(error) => {
+            if was_registered && !previous_shortcut.is_empty() {
+                let rollback_result = app.global_shortcut().register(previous_shortcut.as_str());
+                let rollback_registered = rollback_result.is_ok();
+                *shortcut_state.reset_cycle_registered.lock().unwrap() = rollback_registered;
+                if rollback_registered {
+                    *shortcut_state.current_reset_cycle_shortcut.lock().unwrap() = previous_shortcut.clone();
+                } else {
+                    *shortcut_state.current_reset_cycle_shortcut.lock().unwrap() = String::new();
+                }
+
+                if let Err(rollback_error) = rollback_result {
+                    return Err(format!(
+                        "新快捷键注册失败：{error}；回滚旧快捷键也失败：{rollback_error}"
+                    ));
+                }
+            } else {
+                *shortcut_state.reset_cycle_registered.lock().unwrap() = false;
+                *shortcut_state.current_reset_cycle_shortcut.lock().unwrap() = String::new();
+            }
+
+            Err(format!(
+                "新快捷键注册失败，可能已被系统或其他软件占用：{error}"
+            ))
+        }
+    }
+}
+
 fn load_or_init_app_config(app: &tauri::AppHandle) -> Result<AppConfig, String> {
     let store = app
         .store(APP_CONFIG_STORE_PATH)
@@ -568,6 +682,23 @@ fn replace_runtime_config(app: &tauri::AppHandle, config: AppConfig, reset_timer
     let mut normalized = config.normalized();
     if let Ok(registered) = sync_autostart_state(app, normalized.autostart_enabled) {
         normalized.autostart_enabled = registered;
+    }
+
+    let shortcut_state = app.state::<ShortcutRegistrationState>();
+    let previous_shortcut = shortcut_state
+        .current_reset_cycle_shortcut
+        .lock()
+        .unwrap()
+        .clone();
+    let previous_registered = *shortcut_state.reset_cycle_registered.lock().unwrap();
+
+    if normalized.reset_cycle_shortcut != previous_shortcut || !previous_registered {
+        apply_reset_cycle_shortcut_registration(app, &normalized.reset_cycle_shortcut)?;
+        normalized.reset_cycle_shortcut = shortcut_state
+            .current_reset_cycle_shortcut
+            .lock()
+            .unwrap()
+            .clone();
     }
 
     persist_app_config(app, &normalized)?;
@@ -689,9 +820,15 @@ fn get_autostart_enabled(app: tauri::AppHandle) -> Result<bool, String> {
 fn get_runtime_info(app: tauri::AppHandle) -> RuntimeInfo {
     let shortcut_state = app.state::<ShortcutRegistrationState>();
     let reset_cycle_shortcut_registered = *shortcut_state.reset_cycle_registered.lock().unwrap();
+    let reset_cycle_shortcut = shortcut_state
+        .current_reset_cycle_shortcut
+        .lock()
+        .unwrap()
+        .clone();
     RuntimeInfo {
         version: app.package_info().version.to_string(),
         reset_cycle_shortcut_registered,
+        reset_cycle_shortcut,
     }
 }
 
@@ -971,6 +1108,7 @@ pub fn run() {
         })
         .manage(ShortcutRegistrationState {
             reset_cycle_registered: Mutex::new(false),
+            current_reset_cycle_shortcut: Mutex::new(DEFAULT_RESET_CYCLE_SHORTCUT.to_string()),
         })
         .manage(BreakFlowState {
             current: Mutex::new(BreakFlowSession::default()),
@@ -989,27 +1127,46 @@ pub fn run() {
             #[cfg(desktop)]
             {
                 let shortcut_plugin = tauri_plugin_global_shortcut::Builder::new()
-                    .with_shortcuts(["ctrl+alt+q"])?
                     .with_handler(|app, shortcut, event| {
-                        if event.state == ShortcutState::Pressed
-                            && shortcut.matches(Modifiers::CONTROL | Modifiers::ALT, Code::KeyQ)
-                        {
+                        if event.state == ShortcutState::Pressed {
+                            let shortcut_state = app.state::<ShortcutRegistrationState>();
+                            let current_shortcut = shortcut_state
+                                .current_reset_cycle_shortcut
+                                .lock()
+                                .unwrap()
+                                .clone();
+                            if current_shortcut == shortcut.to_string() {
                             reset_focus_cycle(app);
+                            }
                         }
                     })
                     .build();
 
-                let registered = match app_handle.plugin(shortcut_plugin) {
+                let plugin_loaded = match app_handle.plugin(shortcut_plugin) {
                     Ok(_) => true,
                     Err(error) => {
                         eprintln!(
-                            "全局热键 Ctrl+Alt+Q 注册失败，可能被其他应用占用或注册流程异常: {error}"
+                            "全局热键插件初始化失败，运行时热键能力不可用: {error}"
                         );
                         false
                     }
                 };
                 let shortcut_state = app_handle.state::<ShortcutRegistrationState>();
-                *shortcut_state.reset_cycle_registered.lock().unwrap() = registered;
+                *shortcut_state.reset_cycle_registered.lock().unwrap() = false;
+                *shortcut_state.current_reset_cycle_shortcut.lock().unwrap() =
+                    initial_config.reset_cycle_shortcut.clone();
+
+                if plugin_loaded {
+                    if let Err(error) = apply_reset_cycle_shortcut_registration(
+                        &app_handle,
+                        &initial_config.reset_cycle_shortcut,
+                    ) {
+                        eprintln!(
+                            "全局热键 {} 注册失败: {error}",
+                            initial_config.reset_cycle_shortcut
+                        );
+                    }
+                }
             }
 
             {

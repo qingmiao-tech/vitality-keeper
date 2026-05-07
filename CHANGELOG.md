@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.1.9 - 2026-05-07
+
+- Added Arabic interface support with RTL layout handling across the dashboard, break window, and system-level labels.
+- Refined the language picker so each language always displays in its own native script, regardless of the current UI language.
+- Reworked the system settings page with clearer grouping for startup, language/copy, and update-related controls.
+- Improved the global shortcut flow with editable recording UI, runtime registration feedback, and persisted shortcut configuration.
+- Promoted the Windows app and installer version metadata to `v0.1.9` and refreshed the bundled release artifacts.
+
 ## v0.1.8 - 2026-04-30
 
 - Added a real global shortcut registration for `Ctrl + Alt + Q`, plus a runtime status badge and manual reset action in the control center.
