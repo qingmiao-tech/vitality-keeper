@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.2.1 - 2026-05-08
+
+- Reworked the break-session entry flow so both the dashboard action and the tray action use the same Rust-backed start-break path.
+- Added sequential video queue playback with persisted `next_video_path`, dashboard “play next” controls, and next-break preview messaging.
+- Refined break-window synchronization for multi-display playback, including more resilient break window creation and non-blocking media startup.
+- Added Arabic copy refinements, native-script language labels, and system settings polish for shortcut, language, copy-style, and update sections.
+- Promoted the Windows app, installer, and updater metadata to `v0.2.1` in preparation for the next GitHub release.
+
 ## v0.1.9 - 2026-05-07
 
 - Added Arabic interface support with RTL layout handling across the dashboard, break window, and system-level labels.

@@ -108,6 +108,7 @@ struct AppConfig {
     break_strategy: String,
     disabled_videos: Vec<String>,
     custom_video_order: Vec<String>,
+    next_video_path: String,
     theme: String,
     language: String,
     copy_style: String,
@@ -130,6 +131,7 @@ impl Default for AppConfig {
             break_strategy: "video".to_string(),
             disabled_videos: Vec::new(),
             custom_video_order: Vec::new(),
+            next_video_path: String::new(),
             theme: "dao".to_string(),
             language: DEFAULT_LANGUAGE.to_string(),
             copy_style: "balanced".to_string(),
@@ -170,6 +172,7 @@ impl AppConfig {
         self.reset_cycle_shortcut = normalize_reset_cycle_shortcut(&self.reset_cycle_shortcut)
             .unwrap_or_else(|_| DEFAULT_RESET_CYCLE_SHORTCUT.to_string());
         self.video_source = self.video_source.trim().to_string();
+        self.next_video_path = self.next_video_path.trim().to_string();
         self
     }
 }
@@ -506,10 +509,97 @@ fn clear_break_media_state(app: &tauri::AppHandle) {
     *break_state.current.lock().unwrap() = BreakMediaState::default();
 }
 
-fn start_break_now(app: &tauri::AppHandle) {
+fn show_break_windows(app: &tauri::AppHandle) {
+    let monitors = match app.available_monitors() {
+        Ok(monitors) if !monitors.is_empty() => monitors,
+        Ok(_) => {
+            eprintln!("未检测到可用显示器，无法打开休息窗口。");
+            return;
+        }
+        Err(error) => {
+            eprintln!("获取显示器列表失败：{error}");
+            return;
+        }
+    };
+
+    let mut primary_window: Option<tauri::WebviewWindow> = None;
+
+    for (index, monitor) in monitors.iter().enumerate() {
+        let label = format!("break_window_{}", index);
+        let window = if let Some(window) = app.get_webview_window(&label) {
+            window
+        } else {
+            let position = monitor.position();
+            let size = monitor.size();
+            let window = match WebviewWindowBuilder::new(
+                app,
+                label.clone(),
+                WebviewUrl::App("break.html".into()),
+            )
+            .decorations(false)
+            .transparent(true)
+            .shadow(false)
+            .always_on_top(true)
+            .skip_taskbar(true)
+            .resizable(false)
+            .visible(false)
+            .focused(false)
+            .build()
+            {
+                Ok(window) => window,
+                Err(error) => {
+                    eprintln!("创建休息窗口 {label} 失败：{error}");
+                    continue;
+                }
+            };
+
+            apply_app_icon_to_window(app, &window);
+            let _ = window.set_position(PhysicalPosition::new(position.x, position.y));
+            let _ = window.set_size(PhysicalSize::new(size.width, size.height));
+            let _ = window.set_shadow(false);
+            window
+        };
+
+        let _ = window.show();
+        if index == 0 {
+            primary_window = Some(window);
+        }
+    }
+
+    if let Some(window) = primary_window {
+        let _ = window.set_focus();
+    }
+}
+
+fn begin_break_session(app: &tauri::AppHandle, config: AppConfig) {
     ensure_break_flow_active(app);
+    let mut next_config = config;
+    let break_media_state = create_break_media_state(&mut next_config);
+    let _ = replace_runtime_config(app, next_config, false);
+    let break_media_state = match replace_break_media_state(app, break_media_state) {
+        Ok(state) => state,
+        Err(error) => {
+            eprintln!("更新休息媒体状态失败：{error}");
+            return;
+        }
+    };
+    show_break_windows(app);
+    let _ = app.emit("break-media-state-changed", break_media_state);
+}
+
+fn start_break_now(app: &tauri::AppHandle) {
+    let config = app.state::<AppConfigState>().current.lock().unwrap().clone();
+    begin_break_session(app, config);
     let state = app.state::<TimerState>();
-    *state.time_remaining.lock().unwrap() = 0;
+    let work_duration = *state.work_duration.lock().unwrap();
+    *state.time_remaining.lock().unwrap() = work_duration;
+    *state.is_paused.lock().unwrap() = false;
+    let _ = app.emit("timer-tick", work_duration);
+}
+
+#[tauri::command]
+fn start_break_now_command(app: tauri::AppHandle) {
+    start_break_now(&app);
 }
 
 fn finalize_break_flow(app: &tauri::AppHandle) {
@@ -701,6 +791,7 @@ fn replace_runtime_config(app: &tauri::AppHandle, config: AppConfig, reset_timer
             .clone();
     }
 
+    normalize_next_video_path(&mut normalized);
     persist_app_config(app, &normalized)?;
     sync_timer_state(app, &normalized, reset_timer);
 
@@ -748,24 +839,36 @@ fn resolve_playable_videos(config: &AppConfig) -> Vec<String> {
     enabled_videos
 }
 
-fn select_break_video(config: &AppConfig) -> String {
-    use std::time::{SystemTime, UNIX_EPOCH};
-
+fn normalize_next_video_path(config: &mut AppConfig) {
     let videos = resolve_playable_videos(config);
     if videos.is_empty() {
+        config.next_video_path.clear();
+        return;
+    }
+
+    if !videos.iter().any(|path| path == &config.next_video_path) {
+        config.next_video_path = videos[0].clone();
+    }
+}
+
+fn select_break_video(config: &mut AppConfig) -> String {
+    let videos = resolve_playable_videos(config);
+    if videos.is_empty() {
+        config.next_video_path.clear();
         return String::new();
     }
 
-    let seed = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_secs()
-        / 60;
-
-    videos[(seed as usize) % videos.len()].clone()
+    let current_index = videos
+        .iter()
+        .position(|path| path == &config.next_video_path)
+        .unwrap_or(0);
+    let selected = videos[current_index].clone();
+    let next_index = (current_index + 1) % videos.len();
+    config.next_video_path = videos[next_index].clone();
+    selected
 }
 
-fn create_break_media_state(config: &AppConfig) -> BreakMediaState {
+fn create_break_media_state(config: &mut AppConfig) -> BreakMediaState {
     let session_started_at_ms = current_unix_ms();
     BreakMediaState {
         video_path: select_break_video(config),
@@ -804,6 +907,31 @@ fn get_app_config(state: tauri::State<AppConfigState>) -> AppConfig {
 
 #[tauri::command]
 fn update_app_config(app: tauri::AppHandle, config: AppConfig) -> Result<AppConfig, String> {
+    replace_runtime_config(&app, config, false)
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct VideoQueuePreview {
+    next_video_path: String,
+    playable_videos: Vec<String>,
+}
+
+#[tauri::command]
+fn get_video_queue_preview(state: tauri::State<AppConfigState>) -> VideoQueuePreview {
+    let mut config = state.current.lock().unwrap().clone().normalized();
+    normalize_next_video_path(&mut config);
+    VideoQueuePreview {
+        next_video_path: config.next_video_path.clone(),
+        playable_videos: resolve_playable_videos(&config),
+    }
+}
+
+#[tauri::command]
+fn set_next_video_path(app: tauri::AppHandle, video_path: String) -> Result<AppConfig, String> {
+    let state = app.state::<AppConfigState>();
+    let mut config = state.current.lock().unwrap().clone();
+    config.next_video_path = video_path;
     replace_runtime_config(&app, config, false)
 }
 
@@ -1391,43 +1519,10 @@ pub fn run() {
                         }
                         let _ = handle.emit("timer-tick", *time);
                     } else if *time == 0 && !*paused {
-                        ensure_break_flow_active(&handle);
                         *time = work_duration;
-                        let break_media_state = create_break_media_state(&config);
-                        let _ = replace_break_media_state(&handle, break_media_state);
-
-                        if let Ok(monitors) = handle.available_monitors() {
-                            for (index, monitor) in monitors.iter().enumerate() {
-                                let label = format!("break_window_{}", index);
-                                if handle.get_webview_window(&label).is_none() {
-                                    let position = monitor.position();
-                                    let size = monitor.size();
-
-                                    let window = WebviewWindowBuilder::new(
-                                        &handle,
-                                        label,
-                                        WebviewUrl::App("break.html".into()),
-                                    )
-                                    .decorations(false)
-                                    .transparent(true)
-                                    .shadow(false)
-                                    .always_on_top(true)
-                                    .skip_taskbar(true)
-                                    .resizable(false)
-                                    .visible(false)
-                                    .focused(true)
-                                    .build()
-                                    .unwrap();
-
-                                    apply_app_icon_to_window(&handle, &window);
-                                    let _ = window.set_position(PhysicalPosition::new(position.x, position.y));
-                                    let _ = window.set_size(PhysicalSize::new(size.width, size.height));
-                                    let _ = window.set_shadow(false);
-                                    let _ = window.show();
-                                    let _ = window.set_focus();
-                                }
-                            }
-                        }
+                        drop(paused);
+                        drop(time);
+                        begin_break_session(&handle, config.clone());
                     }
                 }
             });
@@ -1438,6 +1533,8 @@ pub fn run() {
             get_time_remaining,
             get_app_config,
             update_app_config,
+            get_video_queue_preview,
+            set_next_video_path,
             get_autostart_enabled,
             get_runtime_info,
             check_for_updates,
@@ -1448,6 +1545,7 @@ pub fn run() {
             minimize_main_window,
             toggle_main_fullscreen,
             control_window,
+            start_break_now_command,
             close_breaks,
             postpone_break,
             reset_break_cycle,

@@ -7,7 +7,7 @@
     <title>元气守恒·筑基令 (Vitality Keeper)</title>
     <link rel="stylesheet" href="styles.css">
     <!-- Load Lucide Icons for modern, clean scalable SVGs -->
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/lucide@latest" defer></script>
     <script src="sortable.min.js"></script>
     <script src="i18n.js"></script>
     <script src="app-config.js"></script>
@@ -20,7 +20,7 @@
             <div class="brand">
                 <div class="gold-dot"></div>
                 <span data-i18n="app.name">元气守恒·筑基令</span>
-                    <span class="version-pill" id="app-version-pill">v0.1.9</span>
+                    <span class="version-pill" id="app-version-pill">v0.2.1</span>
             </div>
         </div>
     </header>
@@ -231,6 +231,10 @@
 
                     <div style="margin-top: 24px;">
                         <h3 data-i18n="media.playlistTitle">视频列表与时长预览：</h3>
+                        <div class="next-video-card">
+                            <span class="next-video-label" data-i18n="media.nextVideoTitle">下一次休息将播放</span>
+                            <strong class="next-video-value" id="next-video-preview" data-i18n="media.nextVideoEmpty">当前还没有可播放的视频</strong>
+                        </div>
                         <ul id="video-playlist"
                             style="color:var(--text-secondary); max-height:200px; overflow-y:auto; border:1px solid var(--border-light); border-radius:8px; padding:16px; list-style:none; margin-top:8px;">
                             <li data-i18n="media.loading">正在加载...</li>
@@ -278,7 +282,7 @@
                                 <h3 data-i18n="system.versionTitle">版本与更新</h3>
                                 <p data-i18n="system.versionDesc">在控制中心查看当前版本，并通过 GitHub Releases 检查和安装更新。</p>
                                 <div class="version-meta-strip">
-                                <span class="version-badge" id="app-version-display">v0.1.9</span>
+                                <span class="version-badge" id="app-version-display">v0.2.1</span>
                                     <span class="source-badge" data-i18n="system.updateSourceGithub">GitHub Releases</span>
                                 </div>
                             </div>
@@ -292,7 +296,7 @@
                                 <div class="update-status-copy">
                                     <div class="update-status-label" data-i18n="system.updateStatusTitle">更新状态</div>
                                     <div class="update-status-text" id="update-status-text" data-i18n="system.updateStatusIdle">尚未检查更新</div>
-                            <div class="update-status-meta" id="update-status-meta">当前版本：v0.1.9</div>
+                            <div class="update-status-meta" id="update-status-meta">当前版本：v0.2.1</div>
                                 </div>
                                 <div class="settings-action-group">
                                     <button type="button" class="action-button accent" id="btn-install-update" hidden
@@ -435,15 +439,19 @@
         let shortcutDraft = ''
         let shortcutStatusMessageKey = ''
         let shortcutStatusTone = ''
+        let videoQueuePreview = {
+            nextVideoPath: '',
+            playableVideos: []
+        }
         let runtimeInfo = {
-            version: '0.1.9',
+            version: '0.2.1',
             resetCycleShortcutRegistered: false,
             resetCycleShortcut: DEFAULT_RESET_CYCLE_SHORTCUT
         }
         let updateUiState = {
             phase: 'idle',
             auto: false,
-            currentVersion: '0.1.9',
+            currentVersion: '0.2.1',
             latestVersion: '',
             notes: '',
             publishedAt: '',
@@ -893,6 +901,27 @@
             return currentConfig
         }
 
+        function getVideoFilename(videoPath) {
+            return String(videoPath || '').split('\\').pop().split('/').pop()
+        }
+
+        async function loadVideoQueuePreview() {
+            videoQueuePreview = await invoke('get_video_queue_preview')
+            return videoQueuePreview
+        }
+
+        function renderNextVideoPreview() {
+            const previewElement = document.getElementById('next-video-preview')
+            if (!previewElement) {
+                return
+            }
+
+            const nextPath = videoQueuePreview?.nextVideoPath || ''
+            previewElement.textContent = nextPath
+                ? getVideoFilename(nextPath)
+                : t('media.nextVideoEmpty')
+        }
+
         function clearShortcutFeedback() {
             shortcutStatusMessageKey = ''
             shortcutStatusTone = ''
@@ -1269,11 +1298,11 @@
             renderUpdatePanel()
         }
 
-        async function resetBreakCycle() {
+        async function startBreakNow() {
             try {
-                await invoke('reset_break_cycle')
+                await invoke('start_break_now_command')
             } catch (error) {
-                console.error('重置休息周期失败', error)
+                console.error('立即开始休息失败', error)
                 alert(String(error))
             }
         }
@@ -1368,7 +1397,7 @@
 
             if (resetCycleButton) {
                 resetCycleButton.addEventListener('click', async () => {
-                    await resetBreakCycle()
+                    await startBreakNow()
                 })
             }
 
@@ -1405,6 +1434,8 @@
 
             videoSourceDisplay.textContent = path || t('media.noSource')
             renderPlaylistMessage(playlist, 'media.loadingMetadata')
+            await loadVideoQueuePreview()
+            renderNextVideoPreview()
 
             if (playlistSortable) {
                 playlistSortable.destroy()
@@ -1443,15 +1474,10 @@
                 for (const videoPath of list) {
                     const listItem = document.createElement('li')
                     listItem.dataset.path = videoPath
-                    listItem.style.display = 'flex'
-                    listItem.style.alignItems = 'center'
-                    listItem.style.gap = '10px'
-                    listItem.style.marginBottom = '10px'
-                    listItem.style.wordBreak = 'break-all'
-                    listItem.style.lineHeight = '1.4'
-                    listItem.style.padding = '6px 8px'
-                    listItem.style.borderRadius = '6px'
-                    listItem.style.transition = 'background 0.15s'
+                    listItem.className = 'playlist-item'
+                    if (videoQueuePreview?.nextVideoPath === videoPath) {
+                        listItem.classList.add('is-next')
+                    }
 
                     const handle = document.createElement('span')
                     handle.className = 'drag-handle'
@@ -1472,16 +1498,41 @@
                         currentConfig = await persistConfig({
                             disabledVideos: Array.from(disabledVideos)
                         })
+                        await refreshVideoList()
                     })
 
+                    const metaColumn = document.createElement('div')
+                    metaColumn.className = 'playlist-meta'
+
                     const textSpan = document.createElement('span')
+                    textSpan.className = 'playlist-title'
                     const filename = videoPath.split('\\').pop().split('/').pop()
                     textSpan.textContent = `${filename} (${t('media.loading')})`
-                    textSpan.style.flex = '1'
+                    metaColumn.appendChild(textSpan)
+
+                    if (videoQueuePreview?.nextVideoPath === videoPath) {
+                        const nextBadge = document.createElement('span')
+                        nextBadge.className = 'playlist-badge'
+                        nextBadge.textContent = t('media.nextVideoBadge')
+                        metaColumn.appendChild(nextBadge)
+                    }
+
+                    const nextButton = document.createElement('button')
+                    nextButton.type = 'button'
+                    nextButton.className = 'playlist-next-button'
+                    nextButton.textContent = t('media.setAsNext')
+                    nextButton.disabled = videoQueuePreview?.nextVideoPath === videoPath
+                    nextButton.addEventListener('click', async () => {
+                        currentConfig = await invoke('set_next_video_path', { videoPath })
+                        await loadVideoQueuePreview()
+                        renderNextVideoPreview()
+                        await refreshVideoList()
+                    })
 
                     listItem.appendChild(handle)
                     listItem.appendChild(checkbox)
-                    listItem.appendChild(textSpan)
+                    listItem.appendChild(metaColumn)
+                    listItem.appendChild(nextButton)
                     playlist.appendChild(listItem)
 
                     const assetUrl = convertFileSrc(videoPath)
@@ -1509,9 +1560,17 @@
                         fallbackTolerance: 3,
                         ghostClass: 'sortable-ghost',
                         chosenClass: 'sortable-chosen',
-                        onEnd: async () => {
+                        onEnd: async (evt) => {
                             const newOrder = Array.from(playlist.querySelectorAll('li')).map((item) => item.dataset.path)
-                            currentConfig = await persistConfig({ customVideoOrder: newOrder })
+                            const movedPath = newOrder[evt.newIndex] || ''
+                            const nextVideoPath = movedPath || newOrder[0] || ''
+                            currentConfig = await persistConfig({
+                                customVideoOrder: newOrder,
+                                nextVideoPath
+                            })
+                            await loadVideoQueuePreview()
+                            renderNextVideoPreview()
+                            await refreshVideoList()
                         }
                     })
                 }
