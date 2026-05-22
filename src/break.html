@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>筑基休息中 - 元气守恒</title>
     <link rel="stylesheet" href="styles.css">
-    <script src="https://unpkg.com/lucide@latest" defer></script>
+    <script src="icon-fallback.js"></script>
     <script src="i18n.js"></script>
     <script src="app-config.js"></script>
     <style>
@@ -387,6 +387,11 @@
         function renderIcons() {
             if (window.lucide && typeof window.lucide.createIcons === 'function') {
                 window.lucide.createIcons()
+                return
+            }
+
+            if (window.vitalityIcons && typeof window.vitalityIcons.createIcons === 'function') {
+                window.vitalityIcons.createIcons()
             }
         }
 
@@ -476,6 +481,17 @@
             return Math.max(1, Number(currentConfig.breakMinutes) || 1) * 60
         }
 
+        function resolveVideoFallbackRemainingSeconds() {
+            const fromState = Number(currentMediaState?.breakDurationSeconds)
+            if (Number.isFinite(fromState) && fromState > 0) {
+                const startedAtMs = Number(currentMediaState?.sessionStartedAtMs) || Date.now()
+                const elapsedSeconds = Math.max(0, (Date.now() - startedAtMs) / 1000)
+                return Math.max(1, fromState - elapsedSeconds)
+            }
+
+            return Math.max(1, Number(currentConfig.breakMinutes) || 1) * 60
+        }
+
         function updateTimeline(videoElement, progressFill, countdownValue, completionPanel) {
             const strategy = resolveBreakStrategy()
             let progress = 0
@@ -494,7 +510,9 @@
                 const duration = Number.isFinite(videoElement.duration) ? videoElement.duration : 0
                 const currentTime = Number.isFinite(videoElement.currentTime) ? videoElement.currentTime : 0
 
-                remainingSeconds = duration > 0 ? Math.max(0, duration - currentTime) : 0
+                remainingSeconds = duration > 0
+                    ? Math.max(0, duration - currentTime)
+                    : resolveVideoFallbackRemainingSeconds()
                 progress = duration > 0 ? currentTime / duration : 0
                 complete = duration > 0 && (videoElement.ended || remainingSeconds <= 0.2)
             }

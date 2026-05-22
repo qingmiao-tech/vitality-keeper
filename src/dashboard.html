@@ -6,8 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>元气守恒·筑基令 (Vitality Keeper)</title>
     <link rel="stylesheet" href="styles.css">
-    <!-- Load Lucide Icons for modern, clean scalable SVGs -->
-    <script src="https://unpkg.com/lucide@latest" defer></script>
+    <script src="icon-fallback.js"></script>
     <script src="sortable.min.js"></script>
     <script src="i18n.js"></script>
     <script src="app-config.js"></script>
@@ -20,7 +19,7 @@
             <div class="brand">
                 <div class="gold-dot"></div>
                 <span data-i18n="app.name">元气守恒·筑基令</span>
-                    <span class="version-pill" id="app-version-pill">v0.2.1</span>
+                    <span class="version-pill" id="app-version-pill">v0.2.2</span>
             </div>
         </div>
     </header>
@@ -282,7 +281,7 @@
                                 <h3 data-i18n="system.versionTitle">版本与更新</h3>
                                 <p data-i18n="system.versionDesc">在控制中心查看当前版本，并通过 GitHub Releases 检查和安装更新。</p>
                                 <div class="version-meta-strip">
-                                <span class="version-badge" id="app-version-display">v0.2.1</span>
+                                <span class="version-badge" id="app-version-display">v0.2.2</span>
                                     <span class="source-badge" data-i18n="system.updateSourceGithub">GitHub Releases</span>
                                 </div>
                             </div>
@@ -296,7 +295,7 @@
                                 <div class="update-status-copy">
                                     <div class="update-status-label" data-i18n="system.updateStatusTitle">更新状态</div>
                                     <div class="update-status-text" id="update-status-text" data-i18n="system.updateStatusIdle">尚未检查更新</div>
-                            <div class="update-status-meta" id="update-status-meta">当前版本：v0.2.1</div>
+                            <div class="update-status-meta" id="update-status-meta">当前版本：v0.2.2</div>
                                 </div>
                                 <div class="settings-action-group">
                                     <button type="button" class="action-button accent" id="btn-install-update" hidden
@@ -444,14 +443,14 @@
             playableVideos: []
         }
         let runtimeInfo = {
-            version: '0.2.1',
+            version: '0.2.2',
             resetCycleShortcutRegistered: false,
             resetCycleShortcut: DEFAULT_RESET_CYCLE_SHORTCUT
         }
         let updateUiState = {
             phase: 'idle',
             auto: false,
-            currentVersion: '0.2.1',
+            currentVersion: '0.2.2',
             latestVersion: '',
             notes: '',
             publishedAt: '',
@@ -780,6 +779,11 @@
         function renderIcons() {
             if (window.lucide && typeof window.lucide.createIcons === 'function') {
                 window.lucide.createIcons()
+                return
+            }
+
+            if (window.vitalityIcons && typeof window.vitalityIcons.createIcons === 'function') {
+                window.vitalityIcons.createIcons()
             }
         }
 

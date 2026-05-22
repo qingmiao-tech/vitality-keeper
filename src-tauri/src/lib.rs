@@ -588,6 +588,14 @@ fn begin_break_session(app: &tauri::AppHandle, config: AppConfig) {
 }
 
 fn start_break_now(app: &tauri::AppHandle) {
+    if is_break_window_showing(app) {
+        show_break_windows(app);
+        let break_state = app.state::<BreakMediaStateStore>();
+        let media_state = break_state.current.lock().unwrap().clone();
+        let _ = app.emit("break-media-state-changed", media_state);
+        return;
+    }
+
     let config = app.state::<AppConfigState>().current.lock().unwrap().clone();
     begin_break_session(app, config);
     let state = app.state::<TimerState>();

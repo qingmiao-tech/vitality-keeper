@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.2.2 - 2026-05-22
+
+- Replaced the break-page icon dependency with a bundled local fallback so the installed Windows build no longer shows empty action buttons when external icon loading fails.
+- Made the “start break now” flow idempotent while a break session is already open, preventing repeated clicks from resetting media state, jumping the playlist, or freezing the break page.
+- Added a countdown fallback for video-based breaks before media metadata is ready, so the break page no longer gets stuck on `00:00` while the video is still loading.
+- Promoted the Windows app, installer, and updater metadata to `v0.2.2` for the hotfix release.
+
 ## v0.2.1 - 2026-05-08
 
 - Reworked the break-session entry flow so both the dashboard action and the tray action use the same Rust-backed start-break path.

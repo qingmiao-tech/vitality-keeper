@@ -1,6 +1,6 @@
 [package]
 name = "vitality-keeper"
-version = "0.2.1"
+version = "0.2.2"
 description = "A lightweight Tauri break reminder with local video guidance and multi-display support."
 authors = ["Qingmiao Tech"]
 license = "MIT"
