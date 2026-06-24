@@ -531,21 +531,25 @@ fn show_break_windows(app: &tauri::AppHandle) {
         } else {
             let position = monitor.position();
             let size = monitor.size();
-            let window = match WebviewWindowBuilder::new(
+            let mut builder = WebviewWindowBuilder::new(
                 app,
                 label.clone(),
                 WebviewUrl::App("break.html".into()),
             )
             .decorations(false)
-            .transparent(true)
             .shadow(false)
             .always_on_top(true)
             .skip_taskbar(true)
             .resizable(false)
             .visible(false)
-            .focused(false)
-            .build()
+            .focused(false);
+
+            #[cfg(not(target_os = "macos"))]
             {
+                builder = builder.transparent(true);
+            }
+
+            let window = match builder.build() {
                 Ok(window) => window,
                 Err(error) => {
                     eprintln!("创建休息窗口 {label} 失败：{error}");
