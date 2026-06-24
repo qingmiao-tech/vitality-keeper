@@ -132,12 +132,11 @@ jobs:
           prerelease: ${{ steps.release_meta.outputs.prerelease }}
           args: --bundles app,dmg --target ${{ matrix.target }}
 
-      - name: Build and release macOS bundles with ad-hoc signing
+      - name: Build and release macOS bundles without Apple certificate
         if: ${{ env.APPLE_CERTIFICATE == '' }}
         uses: tauri-apps/tauri-action@v0.6.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          APPLE_SIGNING_IDENTITY: "-"
         with:
           tagName: ${{ steps.release_meta.outputs.tag }}
           releaseName: ${{ steps.release_meta.outputs.name }}
@@ -151,7 +150,7 @@ jobs:
             Build target: ${{ matrix.target }}
 
             Note:
-            This build uses ad-hoc signing. For external distribution, add Apple signing and notarization secrets.
+            This build does not use an Apple certificate. For external distribution, add Apple signing and notarization secrets.
           releaseDraft: ${{ steps.release_meta.outputs.draft }}
           prerelease: ${{ steps.release_meta.outputs.prerelease }}
           args: --bundles app,dmg --target ${{ matrix.target }}

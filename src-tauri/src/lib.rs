@@ -531,7 +531,7 @@ fn show_break_windows(app: &tauri::AppHandle) {
         } else {
             let position = monitor.position();
             let size = monitor.size();
-            let mut builder = WebviewWindowBuilder::new(
+            let builder = WebviewWindowBuilder::new(
                 app,
                 label.clone(),
                 WebviewUrl::App("break.html".into()),
@@ -545,9 +545,7 @@ fn show_break_windows(app: &tauri::AppHandle) {
             .focused(false);
 
             #[cfg(not(target_os = "macos"))]
-            {
-                builder = builder.transparent(true);
-            }
+            let builder = builder.transparent(true);
 
             let window = match builder.build() {
                 Ok(window) => window,
