@@ -1,0 +1,151 @@
+name: macOS Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "GitHub Release 标签，留空则自动使用 v<package.json version>"
+        required: false
+        default: ""
+        type: string
+      release_name:
+        description: "GitHub Release 标题，留空则自动生成"
+        required: false
+        default: ""
+        type: string
+      release_draft:
+        description: "是否先创建草稿 Release"
+        required: true
+        default: true
+        type: boolean
+      prerelease:
+        description: "是否标记为预发布"
+        required: true
+        default: false
+        type: boolean
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  publish-macos:
+    name: Build macOS ${{ matrix.arch_name }}
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: aarch64-apple-darwin
+            arch_name: AppleSilicon
+          - target: x86_64-apple-darwin
+            arch_name: Intel
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve release metadata
+        id: release_meta
+        shell: bash
+        run: |
+          version=$(node -p "require('./package.json').version")
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            tag="${{ inputs.release_tag }}"
+            name="${{ inputs.release_name }}"
+            draft="${{ inputs.release_draft }}"
+            prerelease="${{ inputs.prerelease }}"
+          else
+            tag="${GITHUB_REF_NAME}"
+            name=""
+            draft="false"
+            prerelease="false"
+          fi
+
+          if [ -z "$tag" ]; then
+            tag="v${version}"
+          fi
+
+          if [ -z "$name" ]; then
+            name="Vitality Keeper ${tag}"
+          fi
+
+          {
+            echo "tag=$tag"
+            echo "name=$name"
+            echo "draft=$draft"
+            echo "prerelease=$prerelease"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            src-tauri -> target
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build and release macOS bundles with Apple certificate
+        if: ${{ secrets.APPLE_CERTIFICATE != '' }}
+        uses: tauri-apps/tauri-action@v0.6.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        with:
+          tagName: ${{ steps.release_meta.outputs.tag }}
+          releaseName: ${{ steps.release_meta.outputs.name }}
+          releaseBody: |
+            macOS release for Vitality Keeper.
+
+            Included artifacts:
+            - .app bundle
+            - .dmg installer
+
+            Build target: ${{ matrix.target }}
+          releaseDraft: ${{ steps.release_meta.outputs.draft }}
+          prerelease: ${{ steps.release_meta.outputs.prerelease }}
+          args: --bundles app,dmg --target ${{ matrix.target }}
+
+      - name: Build and release macOS bundles with ad-hoc signing
+        if: ${{ secrets.APPLE_CERTIFICATE == '' }}
+        uses: tauri-apps/tauri-action@v0.6.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APPLE_SIGNING_IDENTITY: "-"
+        with:
+          tagName: ${{ steps.release_meta.outputs.tag }}
+          releaseName: ${{ steps.release_meta.outputs.name }}
+          releaseBody: |
+            macOS release for Vitality Keeper.
+
+            Included artifacts:
+            - .app bundle
+            - .dmg installer
+
+            Build target: ${{ matrix.target }}
+
+            Note:
+            This build uses ad-hoc signing. For external distribution, add Apple signing and notarization secrets.
+          releaseDraft: ${{ steps.release_meta.outputs.draft }}
+          prerelease: ${{ steps.release_meta.outputs.prerelease }}
+          args: --bundles app,dmg --target ${{ matrix.target }}

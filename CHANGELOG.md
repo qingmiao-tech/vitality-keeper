@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.2.3 - 2026-06-24
+
+- Added a dedicated GitHub Actions workflow that builds macOS `.app` and `.dmg` bundles on `macos-latest` for both Apple Silicon and Intel targets.
+- Added a macOS release workflow guide so the repository can document ad-hoc test builds and the Apple signing secrets required for wider distribution.
+- Promoted the app, installer, updater metadata, and dashboard version display to `v0.2.3` to keep release artifacts aligned across Windows and GitHub-hosted macOS packaging.
+
 ## v0.2.2 - 2026-05-22
 
 - Replaced the break-page icon dependency with a bundled local fallback so the installed Windows build no longer shows empty action buttons when external icon loading fails.
