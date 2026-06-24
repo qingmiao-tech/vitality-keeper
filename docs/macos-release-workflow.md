@@ -33,9 +33,10 @@
 
 ### 最低可运行
 
-如果不配置 Apple 证书，工作流会构建未公证的测试包：
+如果不配置 Apple 证书，工作流会构建未公证的测试包，但仍需要 Tauri updater 签名 secrets：
 
-- 不需要额外 secrets
+- `TAURI_SIGNING_PRIVATE_KEY`
+- `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`
 - 适合内部测试
 - 外部分发时，macOS 仍可能提示安全限制
 
